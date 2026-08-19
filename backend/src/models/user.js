@@ -67,7 +67,78 @@ const userSchema = new mongoose.Schema({
     isActive: {
         type: Boolean,
         default: true
-    }
+    },
+
+
+
+    bio: {
+        type: String,
+        trim: true,
+        maxlength: 500,
+        default: ""
+    },
+
+    location: {
+        type: String,
+        trim: true,
+        maxlength: 100,
+        default: ""
+    },
+
+    college: {
+        type: String,
+        trim: true,
+        maxlength: 150,
+        default: ""
+    },
+
+    course: {
+        type: String,
+        trim: true,
+        maxlength: 100,
+        default: ""
+    },
+
+    graduationYear: {
+        type: Number,
+        min: 2000,
+        max: 2100,
+        default: null
+    },
+
+    skills: {
+        type: [String],
+        default: []
+    },
+
+    experienceLevel: {
+        type: String,
+        enum: ["beginner", "intermediate", "advanced"],
+        default: "beginner"
+    },
+
+    interests: {
+        type: [String],
+        default: []
+    },
+
+    github: {
+        type: String,
+        trim: true,
+        default: ""
+    },
+
+    linkedin: {
+        type: String,
+        trim: true,
+        default: ""
+    },
+
+    portfolio: {
+        type: String,
+        trim: true,
+        default: ""
+    },
 }, {
     timestamps: true
 });
