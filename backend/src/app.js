@@ -4,7 +4,7 @@ import cookieParser from "cookie-parser";
 import helmet from "helmet";
 import errorMiddleware from "./middleware/error.middleware.js";
 import authRoutes from "./routes/auth.routes.js";
-
+import userRoutes from "./routes/user.routes.js";
 const app = express();
 
 // Security middleware
@@ -37,5 +37,6 @@ app.get("/api/v1/health", (req, res) => {
 
 // Authentication routes
 app.use("/api/v1/auth", authRoutes);
+app.use("/api/v1/users", userRoutes);
 app.use(errorMiddleware);
 export default app;

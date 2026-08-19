@@ -1,8 +1,8 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import User from "../models/User.js";
-import generateOTP from "../utils/generateOTP.js";
-import sendEmail from "../utils/sendEmail.js";
+import User from "../../models/User.js";
+import generateOTP from "../../utils/generateOTP.js";
+import sendEmail from "../../utils/sendEmail.js";
 import {
     generateAccessToken,
     generateRefreshToken
@@ -238,10 +238,171 @@ const refreshAccessToken = async(refreshToken) => {
         throw new Error("Invalid or expired refresh token");
     }
 };
+
+
+const logoutUser = async(refreshToken) => {
+    if (!refreshToken) {
+        return;
+    }
+
+    await User.findOneAndUpdate({ refreshToken }, {
+        $set: {
+            refreshToken: null
+        }
+    });
+};
+
+const forgotPassword = async(email) => {
+    const user = await User.findOne({ email });
+
+    if (!user) {
+        return;
+    }
+
+    if (!user.isActive) {
+        return;
+    }
+
+    const otp = generateOTP();
+
+    const otpExpire = new Date(
+        Date.now() + 10 * 60 * 1000
+    );
+
+    user.resetPasswordOTP = otp;
+    user.resetPasswordOTPExpire = otpExpire;
+
+    await user.save();
+
+    await sendEmail({
+        to: email,
+        subject: "Password reset OTP",
+        html: `
+            <h2>Project Partner Finder</h2>
+
+            <p>Hello ${user.name},</p>
+
+            <p>Your password reset OTP is:</p>
+
+            <h1>${otp}</h1>
+
+            <p>This OTP will expire in 10 minutes.</p>
+
+            <p>If you did not request a password reset, please ignore this email.</p>
+        `
+    });
+};
+
+const resetPassword = async({ email, otp, newPassword }) => {
+    // 1. Find user
+    const user = await User.findOne({ email });
+
+    if (!user) {
+        throw new Error("Invalid reset request");
+    }
+
+    // 2. Check reset OTP
+    if (!user.resetPasswordOTP) {
+        throw new Error("Reset OTP not found");
+    }
+
+    // 3. Check OTP expiry
+    if (!user.resetPasswordOTPExpire ||
+        user.resetPasswordOTPExpire < new Date()
+    ) {
+        throw new Error("Reset OTP has expired");
+    }
+
+    // 4. Compare OTP
+    if (user.resetPasswordOTP !== otp) {
+        throw new Error("Invalid reset OTP");
+    }
+
+    // 5. Hash new password
+    const hashedPassword = await bcrypt.hash(newPassword, 12);
+
+    // 6. Update password
+    user.password = hashedPassword;
+
+    // 7. Clear reset OTP
+    user.resetPasswordOTP = null;
+    user.resetPasswordOTPExpire = null;
+
+    // 8. Invalidate existing refresh token
+    user.refreshToken = null;
+
+    // 9. Save changes
+    await user.save();
+
+    return {
+        email: user.email
+    };
+};
+
+
+const changePassword = async({
+    userId,
+    currentPassword,
+    newPassword
+}) => {
+    // 1. Find user
+    const user = await User.findById(userId);
+
+    if (!user) {
+        throw new Error("User not found");
+    }
+
+    // 2. Check current password
+    const isPasswordCorrect = await bcrypt.compare(
+        currentPassword,
+        user.password
+    );
+
+    if (!isPasswordCorrect) {
+        throw new Error("Current password is incorrect");
+    }
+
+    // 3. Prevent same password
+    const isSamePassword = await bcrypt.compare(
+        newPassword,
+        user.password
+    );
+
+    if (isSamePassword) {
+        throw new Error(
+            "New password must be different from current password"
+        );
+    }
+
+    // 4. Hash new password
+    const hashedPassword = await bcrypt.hash(
+        newPassword,
+        12
+    );
+
+    // 5. Update password
+    user.password = hashedPassword;
+
+    // 6. Invalidate refresh token
+    user.refreshToken = null;
+
+    // 7. Save
+    await user.save();
+
+    return {
+        email: user.email
+    };
+};
+
 export {
     registerUser,
     verifyEmail,
     resendVerificationOTP,
     loginUser,
-    refreshAccessToken
+    refreshAccessToken,
+    logoutUser,
+    forgotPassword,
+    resetPassword,
+    changePassword
+
 };

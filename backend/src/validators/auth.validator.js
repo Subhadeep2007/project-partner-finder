@@ -85,6 +85,7 @@ const resendVerificationSchema = Joi.object({
         .required()
 });
 
+
 export {
     registerSchema,
     loginSchema,
@@ -93,4 +94,5 @@ export {
     resetPasswordSchema,
     changePasswordSchema,
     resendVerificationSchema
+
 };
