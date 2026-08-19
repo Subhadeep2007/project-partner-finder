@@ -76,11 +76,21 @@ const changePasswordSchema = Joi.object({
         .required()
 });
 
+
+const resendVerificationSchema = Joi.object({
+    email: Joi.string()
+        .email()
+        .lowercase()
+        .trim()
+        .required()
+});
+
 export {
     registerSchema,
     loginSchema,
     verifyEmailSchema,
     forgotPasswordSchema,
     resetPasswordSchema,
-    changePasswordSchema
+    changePasswordSchema,
+    resendVerificationSchema
 };
