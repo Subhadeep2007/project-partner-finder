@@ -1,8 +1,12 @@
 import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 import generateOTP from "../utils/generateOTP.js";
 import sendEmail from "../utils/sendEmail.js";
-
+import {
+    generateAccessToken,
+    generateRefreshToken
+} from "../../utils/generateToken.js";
 const registerUser = async({ name, email, password }) => {
     // 1. Check if user already exists
     const existingUser = await User.findOne({ email });
@@ -147,9 +151,97 @@ const resendVerificationOTP = async(email) => {
         email: user.email
     };
 };
+
+
+
+const loginUser = async({ email, password }) => {
+    // 1. Find user
+    const user = await User.findOne({ email });
+
+    if (!user) {
+        throw new Error("Invalid email or password");
+    }
+
+    // 2. Check account status
+    if (!user.isActive) {
+        throw new Error("Your account is inactive");
+    }
+
+    // 3. Check email verification
+    if (!user.isEmailVerified) {
+        throw new Error("Please verify your email first");
+    }
+
+    // 4. Compare password
+    const isPasswordCorrect = await bcrypt.compare(
+        password,
+        user.password
+    );
+
+    if (!isPasswordCorrect) {
+        throw new Error("Invalid email or password");
+    }
+
+    // 5. Generate tokens
+    const accessToken = generateAccessToken(user._id.toString());
+
+    const refreshToken = generateRefreshToken(user._id.toString());
+
+    // 6. Save refresh token
+    user.refreshToken = refreshToken;
+
+    await user.save();
+
+    // 7. Return safe user data + tokens
+    return {
+        user: {
+            id: user._id,
+            name: user.name,
+            email: user.email,
+            role: user.role,
+            isEmailVerified: user.isEmailVerified
+        },
+        accessToken,
+        refreshToken
+    };
+};
+
+const refreshAccessToken = async(refreshToken) => {
+    if (!refreshToken) {
+        throw new Error("Refresh token not found");
+    }
+
+    const user = await User.findOne({ refreshToken });
+
+    if (!user) {
+        throw new Error("Invalid refresh token");
+    }
+
+    try {
+        const decoded = jwt.verify(
+            refreshToken,
+            process.env.REFRESH_TOKEN_SECRET
+        );
+
+        if (decoded.userId !== user._id.toString()) {
+            throw new Error("Invalid refresh token");
+        }
+
+        const accessToken = generateAccessToken(
+            user._id.toString()
+        );
+
+        return {
+            accessToken
+        };
+    } catch (error) {
+        throw new Error("Invalid or expired refresh token");
+    }
+};
 export {
     registerUser,
     verifyEmail,
     resendVerificationOTP,
-    resendVerificationOTP
+    loginUser,
+    refreshAccessToken
 };

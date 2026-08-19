@@ -1,4 +1,4 @@
-import { registerUser, verifyEmail as verifyEmailService, resendVerificationOTP as resendVerificationOTPService } from "../../services/auth.service.js";
+import { registerUser, verifyEmail as verifyEmailService, resendVerificationOTP as resendVerificationOTPService, loginUser, refreshAccessToken } from "../../services/auth.service.js";
 
 const register = async(req, res, next) => {
     try {
@@ -26,7 +26,40 @@ const verifyEmail = async(req, res, next) => {
         next(error);
     }
 };
+const login = async(req, res, next) => {
+    try {
+        const result = await loginUser(req.body);
+        res.cookie("refreshToken", result.refreshToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "strict",
+            maxAge: 7 * 24 * 60 * 60 * 1000
+        });
+        return res.status(200).json({
+            success: true,
+            message: "Login successful",
+            data: result
+        });
+    } catch (error) {
+        next(error);
+    }
+};
 
+const refreshToken = async(req, res, next) => {
+    try {
+        const token = req.cookies.refreshToken;
+
+        const result = await refreshAccessToken(token);
+
+        return res.status(200).json({
+            success: true,
+            message: "Access token refreshed successfully",
+            data: result
+        });
+    } catch (error) {
+        next(error);
+    }
+};
 const resendVerificationOTP = async(req, res, next) => {
     try {
         const result = await resendVerificationOTPService(req.body.email);
@@ -43,5 +76,7 @@ const resendVerificationOTP = async(req, res, next) => {
 export {
     register,
     verifyEmail,
-    resendVerificationOTP
+    resendVerificationOTP,
+    login,
+    refreshToken
 };

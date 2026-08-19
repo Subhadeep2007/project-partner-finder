@@ -1,8 +1,8 @@
 import express from "express";
 
-import { register, verifyEmail, resendVerificationOTP } from "../controllers/auth/auth.controller.js";
+import { register, verifyEmail, resendVerificationOTP, login, refreshToken } from "../controllers/auth/auth.controller.js";
 import validate from "../middleware/validate.middleware.js";
-import { registerSchema, verifyEmailSchema, resendVerificationSchema } from "../validators/auth.validator.js";
+import { registerSchema, verifyEmailSchema, resendVerificationSchema, loginSchema } from "../validators/auth.validator.js";
 
 const router = express.Router();
 
@@ -21,5 +21,14 @@ router.post(
     "/resend-verification",
     validate(resendVerificationSchema),
     resendVerificationOTP
+);
+router.post(
+    "/login",
+    validate(loginSchema),
+    login
+);
+router.post(
+    "/refresh-token",
+    refreshToken
 );
 export default router;
