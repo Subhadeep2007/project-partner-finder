@@ -59,7 +59,33 @@ const addSkillSchema = Joi.object({
         .max(50)
         .required()
 });
+
+const searchUserSchema = Joi.object({
+    name: Joi.string()
+        .trim()
+        .min(2)
+        .max(50)
+        .optional(),
+
+    skill: Joi.string()
+        .trim()
+        .min(2)
+        .max(50)
+        .optional(),
+
+    page: Joi.number()
+        .integer()
+        .min(1)
+        .default(1),
+
+    limit: Joi.number()
+        .integer()
+        .min(1)
+        .max(50)
+        .default(10)
+}).or("name", "skill");
 export {
     updateProfileSchema,
-    addSkillSchema
+    addSkillSchema,
+    searchUserSchema
 };

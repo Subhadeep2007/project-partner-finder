@@ -6,14 +6,17 @@ import {
     updateProfile,
     uploadProfileImageController,
     addSkillController,
-    removeSkillController
+    removeSkillController,
+    getPublicProfileController,
+    searchUsersController
 } from "../controllers/user/user.controller.js";
 import validate from "../middleware/validate.middleware.js";
 
 import upload from "../middleware/upload.middleware.js";
 import {
     updateProfileSchema,
-    addSkillSchema
+    addSkillSchema,
+    searchUserSchema
 } from "../validators/user.validator.js";
 const router = express.Router();
 
@@ -47,6 +50,18 @@ router.delete(
     "/me/skills/:skill",
     authMiddleware,
     removeSkillController
+);
+router.get(
+    "/:userId",
+    authMiddleware,
+    getPublicProfileController
+);
+
+router.get(
+    "/search",
+    authMiddleware,
+    validate(searchUserSchema),
+    searchUsersController
 );
 
 export default router;

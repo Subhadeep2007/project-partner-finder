@@ -138,9 +138,79 @@ const removeSkill = async(userId, skill) => {
         skills: user.skills
     };
 };
+
+const getPublicProfile = async(userId) => {
+    const user = await User.findById(userId).select(
+        "name profileImage skills createdAt"
+    );
+
+    if (!user) {
+        throw new Error("User not found");
+    }
+
+    return user;
+};
+
+const searchUsers = async({
+    name,
+    skill,
+    page = 1,
+    limit = 10
+}) => {
+    const query = {
+        isActive: true,
+        isEmailVerified: true
+    };
+
+    if (name) {
+        query.name = {
+            $regex: name,
+            $options: "i"
+        };
+    }
+
+    if (skill) {
+        query.skills = {
+            $regex: skill,
+            $options: "i"
+        };
+    }
+
+    // String query params ko number mein convert
+    const currentPage = Number(page);
+    const currentLimit = Number(limit);
+
+    // Kitne users skip honge
+    const skip = (currentPage - 1) * currentLimit;
+
+    // Total matching users
+    const totalUsers = await User.countDocuments(query);
+
+    // Paginated users
+    const users = await User.find(query)
+        .select("name profileImage skills createdAt")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(currentLimit);
+
+    return {
+        users,
+
+        pagination: {
+            totalUsers,
+            totalPages: Math.ceil(
+                totalUsers / currentLimit
+            ),
+            currentPage,
+            limit: currentLimit
+        }
+    };
+};
 export {
     updateMyProfile,
     uploadProfileImage,
     addSkill,
-    removeSkill
+    removeSkill,
+    getPublicProfile,
+    searchUsers
 };

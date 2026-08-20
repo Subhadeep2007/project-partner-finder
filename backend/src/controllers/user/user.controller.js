@@ -3,7 +3,9 @@ import {
     updateMyProfile,
     uploadProfileImage,
     addSkill,
-    removeSkill
+    removeSkill,
+    getPublicProfile,
+    searchUsers
 } from "../../services/user/user.service.js";
 const getMyProfile = async(req, res, next) => {
     try {
@@ -95,10 +97,39 @@ const removeSkillController = async(req, res, next) => {
         next(error);
     }
 };
+
+const getPublicProfileController = async(req, res, next) => {
+    try {
+        const result = await getPublicProfile(req.params.userId);
+
+        return res.status(200).json({
+            success: true,
+            data: result
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+const searchUsersController = async(req, res, next) => {
+    try {
+        const result = await searchUsers(req.query);
+
+        return res.status(200).json({
+            success: true,
+            pagination: result.pagination,
+            data: result.users
+        });
+    } catch (error) {
+        next(error);
+    }
+};
 export {
     getMyProfile,
     updateProfile,
     uploadProfileImageController,
     addSkillController,
-    removeSkillController
+    removeSkillController,
+    getPublicProfileController,
+    searchUsersController
 };
