@@ -1,5 +1,4 @@
 import User from "../../models/user.js";
-
 import cloudinary from "../../config/cloudinary.js";
 const updateMyProfile = async(userId, profileData) => {
     const user = await User.findById(userId);
@@ -84,7 +83,64 @@ const uploadProfileImage = async(userId, file) => {
         profileImage: user.profileImage
     };
 };
+
+
+const addSkill = async(userId, skill) => {
+    const user = await User.findById(userId);
+
+    if (!user) {
+        throw new Error("User not found");
+    }
+
+    const normalizedSkill = skill.trim();
+
+    const alreadyExists = user.skills.some(
+        (existingSkill) =>
+        existingSkill.toLowerCase() ===
+        normalizedSkill.toLowerCase()
+    );
+
+    if (alreadyExists) {
+        throw new Error("Skill already exists");
+    }
+
+    user.skills.push(normalizedSkill);
+
+    await user.save();
+
+    return {
+        skills: user.skills
+    };
+};
+
+const removeSkill = async(userId, skill) => {
+    const user = await User.findById(userId);
+
+    if (!user) {
+        throw new Error("User not found");
+    }
+
+    const skillIndex = user.skills.findIndex(
+        (existingSkill) =>
+        existingSkill.toLowerCase() ===
+        skill.trim().toLowerCase()
+    );
+
+    if (skillIndex === -1) {
+        throw new Error("Skill not found");
+    }
+
+    user.skills.splice(skillIndex, 1);
+
+    await user.save();
+
+    return {
+        skills: user.skills
+    };
+};
 export {
     updateMyProfile,
-    uploadProfileImage
+    uploadProfileImage,
+    addSkill,
+    removeSkill
 };

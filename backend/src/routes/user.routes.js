@@ -1,13 +1,19 @@
 import express from "express";
 
 import authMiddleware from "../middleware/auth.middleware.js";
-import { getMyProfile, updateProfile, uploadProfileImageController } from "../controllers/user/user.controller.js";
+import {
+    getMyProfile,
+    updateProfile,
+    uploadProfileImageController,
+    addSkillController,
+    removeSkillController
+} from "../controllers/user/user.controller.js";
 import validate from "../middleware/validate.middleware.js";
-import authMiddleware from "../middleware/auth.middleware.js";
 
 import upload from "../middleware/upload.middleware.js";
 import {
-    updateProfileSchema
+    updateProfileSchema,
+    addSkillSchema
 } from "../validators/user.validator.js";
 const router = express.Router();
 
@@ -28,6 +34,19 @@ router.post(
     authMiddleware,
     upload.single("profileImage"),
     uploadProfileImageController
+);
+
+router.post(
+    "/me/skills",
+    authMiddleware,
+    validate(addSkillSchema),
+    addSkillController
+);
+
+router.delete(
+    "/me/skills/:skill",
+    authMiddleware,
+    removeSkillController
 );
 
 export default router;

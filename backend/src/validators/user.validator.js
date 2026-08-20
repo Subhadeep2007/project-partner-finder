@@ -51,6 +51,15 @@ const updateProfileSchema = Joi.object({
         .allow("")
 }).min(1);
 
+
+const addSkillSchema = Joi.object({
+    skill: Joi.string()
+        .trim()
+        .min(2)
+        .max(50)
+        .required()
+});
 export {
-    updateProfileSchema
+    updateProfileSchema,
+    addSkillSchema
 };
