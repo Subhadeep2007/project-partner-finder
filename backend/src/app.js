@@ -7,6 +7,7 @@ import authRoutes from "./routes/auth.routes.js";
 import userRoutes from "./routes/user.routes.js";
 import projectRoutes from "./routes/project.routes.js";
 import joinRequestRoutes from "./routes/joinRequest.routes.js";
+import messageRoutes from "./routes/message.routes.js";
 const app = express();
 
 // Security middleware
@@ -45,5 +46,6 @@ app.use(
     projectRoutes
 );
 app.use("/api/v1", joinRequestRoutes);
+app.use("/api/v1", messageRoutes);
 app.use(errorMiddleware);
 export default app;
