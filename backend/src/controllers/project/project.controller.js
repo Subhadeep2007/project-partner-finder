@@ -3,7 +3,8 @@ import {
     getMyProjects,
     getProjectById,
     updateProject,
-    deleteProject
+    deleteProject,
+    getAllProjects
 } from "../../services/project/project.service.js";
 
 const createProjectController = async(req, res, next) => {
@@ -89,10 +90,32 @@ const deleteProjectController = async(req, res, next) => {
         next(error);
     }
 };
+
+const getAllProjectsController = async(req, res, next) => {
+    try {
+        const result = await getAllProjects({
+            search: req.query.search,
+            skill: req.query.skill,
+            page: req.query.page,
+            limit: req.query.limit,
+            sort: req.query.sort
+        });
+
+        return res.status(200).json({
+            success: true,
+            count: result.projects.length,
+            data: result.projects,
+            pagination: result.pagination
+        });
+    } catch (error) {
+        next(error);
+    }
+};
 export {
     createProjectController,
     getMyProjectsController,
     getProjectByIdController,
     updateProjectController,
-    deleteProjectController
+    deleteProjectController,
+    getAllProjectsController
 };

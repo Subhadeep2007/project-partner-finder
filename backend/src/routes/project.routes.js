@@ -5,7 +5,8 @@ import {
     getMyProjectsController,
     getProjectByIdController,
     updateProjectController,
-    deleteProjectController
+    deleteProjectController,
+    getAllProjectsController
 } from "../controllers/project/project.controller.js";
 
 import authMiddleware from "../middleware/auth.middleware.js";
@@ -48,5 +49,11 @@ router.delete(
     "/:projectId",
     authMiddleware,
     deleteProjectController
+);
+
+router.get(
+    "/",
+    authMiddleware,
+    getAllProjectsController
 );
 export default router;

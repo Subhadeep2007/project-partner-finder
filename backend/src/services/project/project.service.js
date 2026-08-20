@@ -105,10 +105,92 @@ const deleteProject = async(projectId, userId) => {
     };
 };
 
+
+const getAllProjects = async({
+    search,
+    skill,
+    page = 1,
+    limit = 10,
+    sort = "latest"
+} = {}) => {
+    const filter = {
+        status: "open"
+    };
+
+    // Search by title or description
+    if (search) {
+        filter.$or = [{
+                title: {
+                    $regex: search,
+                    $options: "i"
+                }
+            },
+            {
+                description: {
+                    $regex: search,
+                    $options: "i"
+                }
+            }
+        ];
+    }
+
+    // Filter by required skill
+    if (skill) {
+        filter.requiredSkills = {
+            $regex: skill,
+            $options: "i"
+        };
+    }
+
+    const currentPage = Math.max(Number(page) || 1, 1);
+    const pageLimit = Math.min(
+        Math.max(Number(limit) || 10, 1),
+        50
+    );
+
+    let sortOption = {
+        createdAt: -1
+    };
+
+    if (sort === "oldest") {
+        sortOption = {
+            createdAt: 1
+        };
+    }
+
+    const skip = (currentPage - 1) * pageLimit;
+
+    const [projects, totalProjects] = await Promise.all([
+        Project.find(filter)
+        .populate(
+            "owner",
+            "name profileImage skills"
+        )
+        .sort(sortOption)
+        .skip(skip)
+        .limit(pageLimit),
+
+        Project.countDocuments(filter)
+    ]);
+
+    return {
+        projects,
+        pagination: {
+            currentPage,
+            limit: pageLimit,
+            totalProjects,
+            totalPages: Math.ceil(
+                totalProjects / pageLimit
+            )
+        }
+    };
+};
+
 export {
     createProject,
     getMyProjects,
     getProjectById,
     updateProject,
-    deleteProject
+    deleteProject,
+    getAllProjects
 };
