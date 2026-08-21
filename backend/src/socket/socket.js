@@ -2,7 +2,9 @@ import { Server } from "socket.io";
 import jwt from "jsonwebtoken";
 import Project from "../models/project.js";
 import {
-    createMessage
+    createMessage,
+    markDelivered,
+    markRead
 } from "../services/message/message.service.js";
 let io;
 
@@ -141,6 +143,78 @@ const initializeSocket = (server) => {
                         success: true,
                         message: "Message sent successfully",
                         data: message
+                    });
+
+                } catch (error) {
+                    return callback({
+                        success: false,
+                        message: error.message
+                    });
+                }
+            }
+        );
+
+
+        socket.on(
+            "message_delivered",
+            async({ messageId }, callback) => {
+                try {
+                    const userId = socket.user.userId;
+
+                    const message = await markDelivered({
+                        messageId,
+                        userId
+                    });
+
+                    // Notify everyone in this project chat
+                    io.to(
+                        `project:${message.project.toString()}`
+                    ).emit(
+                        "message_delivery_updated", {
+                            messageId: message._id,
+                            deliveredTo: message.deliveredTo
+                        }
+                    );
+
+                    return callback({
+                        success: true,
+                        message: "Message marked as delivered"
+                    });
+
+                } catch (error) {
+                    return callback({
+                        success: false,
+                        message: error.message
+                    });
+                }
+            }
+        );
+
+        socket.on(
+            "message_read",
+            async({ messageId }, callback) => {
+                try {
+                    const userId = socket.user.userId;
+
+                    const message = await markRead({
+                        messageId,
+                        userId
+                    });
+
+                    // Notify project chat members
+                    io.to(
+                        `project:${message.project.toString()}`
+                    ).emit(
+                        "message_read_updated", {
+                            messageId: message._id,
+                            readBy: message.readBy,
+                            deliveredTo: message.deliveredTo
+                        }
+                    );
+
+                    return callback({
+                        success: true,
+                        message: "Message marked as read"
                     });
 
                 } catch (error) {

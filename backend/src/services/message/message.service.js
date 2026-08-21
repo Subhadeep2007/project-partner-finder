@@ -125,7 +125,90 @@ const getProjectMessages = async({
     };
 };
 
+
+
+const markDelivered = async({
+    messageId,
+    userId
+}) => {
+    // 1. Find message
+    const message = await Message.findById(messageId);
+
+    if (!message) {
+        throw new Error("Message not found");
+    }
+
+    // 2. Sender cannot mark own message as delivered
+    if (message.sender.toString() === userId) {
+        throw new Error(
+            "Sender cannot mark their own message as delivered"
+        );
+    }
+
+    // 3. Prevent duplicate delivery status
+    const alreadyDelivered =
+        message.deliveredTo.some(
+            (deliveredUserId) =>
+            deliveredUserId.toString() === userId
+        );
+
+    if (!alreadyDelivered) {
+        message.deliveredTo.push(userId);
+        await message.save();
+    }
+
+    return message;
+};
+
+
+const markRead = async({
+    messageId,
+    userId
+}) => {
+    // 1. Find message
+    const message = await Message.findById(messageId);
+
+    if (!message) {
+        throw new Error("Message not found");
+    }
+
+    // 2. Sender cannot mark own message as read
+    if (message.sender.toString() === userId) {
+        throw new Error(
+            "Sender cannot mark their own message as read"
+        );
+    }
+
+    // 3. Check whether already read
+    const alreadyRead =
+        message.readBy.some(
+            (readUserId) =>
+            readUserId.toString() === userId
+        );
+
+    // 4. Add user only once
+    if (!alreadyRead) {
+        message.readBy.push(userId);
+
+        // Read means delivered too
+        const alreadyDelivered =
+            message.deliveredTo.some(
+                (deliveredUserId) =>
+                deliveredUserId.toString() === userId
+            );
+
+        if (!alreadyDelivered) {
+            message.deliveredTo.push(userId);
+        }
+
+        await message.save();
+    }
+
+    return message;
+};
 export {
     createMessage,
-    getProjectMessages
+    getProjectMessages,
+    markDelivered,
+    markRead
 };

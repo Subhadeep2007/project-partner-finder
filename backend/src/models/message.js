@@ -14,6 +14,18 @@ const messageSchema = new mongoose.Schema({
         required: true
     },
 
+
+    deliveredTo: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User"
+    }],
+
+    readBy: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User"
+    }],
+
+
     messageType: {
         type: String,
         enum: ["text", "image", "file"],
