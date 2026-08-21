@@ -4,7 +4,9 @@ import Project from "../models/project.js";
 import {
     createMessage,
     markDelivered,
-    markRead
+    markRead,
+    deleteMessageForMe,
+    deleteMessageForEveryone
 } from "../services/message/message.service.js";
 let io;
 
@@ -119,7 +121,8 @@ const initializeSocket = (server) => {
                 try {
                     const {
                         projectId,
-                        content
+                        encryptedContent,
+                        iv
                     } = data;
 
                     // 1. Get authenticated sender
@@ -129,7 +132,8 @@ const initializeSocket = (server) => {
                     const message = await createMessage({
                         projectId,
                         senderId,
-                        content
+                        encryptedContent,
+                        iv
                     });
 
                     // 3. Send message to everyone in project room
@@ -215,6 +219,74 @@ const initializeSocket = (server) => {
                     return callback({
                         success: true,
                         message: "Message marked as read"
+                    });
+
+                } catch (error) {
+                    return callback({
+                        success: false,
+                        message: error.message
+                    });
+                }
+            }
+        );
+
+
+        socket.on(
+            "delete_message_for_me",
+            async({ messageId }, callback) => {
+                try {
+                    const userId = socket.user.userId;
+
+                    await deleteMessageForMe({
+                        messageId,
+                        userId
+                    });
+
+                    // Only confirm to this user
+                    return callback({
+                        success: true,
+                        message: "Message deleted for you",
+                        data: {
+                            messageId
+                        }
+                    });
+
+                } catch (error) {
+                    return callback({
+                        success: false,
+                        message: error.message
+                    });
+                }
+            }
+        );
+
+
+
+        socket.on(
+            "delete_message_for_everyone",
+            async({ messageId }, callback) => {
+                try {
+                    const userId = socket.user.userId;
+
+                    const message =
+                        await deleteMessageForEveryone({
+                            messageId,
+                            userId
+                        });
+
+                    // Notify everyone in the project chat
+                    io.to(
+                        `project:${message.project.toString()}`
+                    ).emit(
+                        "message_deleted_for_everyone", {
+                            messageId: message._id,
+                            deletedAt: message.deletedAt
+                        }
+                    );
+
+                    return callback({
+                        success: true,
+                        message: "Message deleted for everyone"
                     });
 
                 } catch (error) {

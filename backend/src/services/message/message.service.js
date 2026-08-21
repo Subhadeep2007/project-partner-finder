@@ -4,7 +4,8 @@ import Project from "../../models/project.js";
 const createMessage = async({
     projectId,
     senderId,
-    content
+    encryptedContent,
+    iv
 }) => {
     // 1. Find project
     const project = await Project.findById(projectId);
@@ -30,24 +31,24 @@ const createMessage = async({
         );
     }
 
-    // 5. Validate message
-    if (!content || !content.trim()) {
+    // 5. Validate encrypted message
+    if (!encryptedContent || !iv) {
         throw new Error(
-            "Message content cannot be empty"
+            "Encrypted message and IV are required"
         );
     }
 
-    // 6. Save message
+    // 6. Save ciphertext only
     const message = await Message.create({
         project: projectId,
         sender: senderId,
         messageType: "text",
-        content: content.trim()
+        encryptedContent,
+        iv
     });
 
     return message;
 };
-
 
 
 const getProjectMessages = async({
@@ -96,7 +97,10 @@ const getProjectMessages = async({
 
     // 6. Get messages
     const messages = await Message.find({
-            project: projectId
+            project: projectId,
+            deletedFor: {
+                $ne: userId
+            }
         })
         .sort({ createdAt: -1 })
         .skip(skip)
@@ -109,7 +113,10 @@ const getProjectMessages = async({
     // 7. Count total messages
     const totalMessages =
         await Message.countDocuments({
-            project: projectId
+            project: projectId,
+            deletedFor: {
+                $ne: userId
+            }
         });
 
     return {
@@ -206,9 +213,94 @@ const markRead = async({
 
     return message;
 };
+
+
+
+const deleteMessageForMe = async({
+    messageId,
+    userId
+}) => {
+    const message = await Message.findById(
+        messageId
+    );
+
+    if (!message) {
+        throw new Error("Message not found");
+    }
+
+    // Check project access
+    const project = await Project.findById(
+        message.project
+    );
+
+    if (!project) {
+        throw new Error("Project not found");
+    }
+
+    const isOwner =
+        project.owner.toString() === userId;
+
+    const isMember =
+        project.members.some(
+            (memberId) =>
+            memberId.toString() === userId
+        );
+
+    if (!isOwner && !isMember) {
+        throw new Error(
+            "You are not authorized to delete this message"
+        );
+    }
+
+    const alreadyDeleted =
+        message.deletedFor.some(
+            (deletedUserId) =>
+            deletedUserId.toString() === userId
+        );
+
+    if (!alreadyDeleted) {
+        message.deletedFor.push(userId);
+
+        await message.save();
+    }
+
+    return message;
+};
+
+
+const deleteMessageForEveryone = async({
+    messageId,
+    userId
+}) => {
+    const message = await Message.findById(
+        messageId
+    );
+
+    if (!message) {
+        throw new Error("Message not found");
+    }
+
+    // Only sender can delete for everyone
+    if (message.sender.toString() !== userId) {
+        throw new Error(
+            "Only the sender can delete this message for everyone"
+        );
+    }
+
+    if (!message.isDeletedForEveryone) {
+        message.isDeletedForEveryone = true;
+        message.deletedAt = new Date();
+
+        await message.save();
+    }
+
+    return message;
+};
 export {
     createMessage,
     getProjectMessages,
     markDelivered,
-    markRead
+    markRead,
+    deleteMessageForMe,
+    deleteMessageForEveryone
 };

@@ -37,6 +37,16 @@ const messageSchema = new mongoose.Schema({
         default: ""
     },
 
+    encryptedContent: {
+        type: String,
+        default: ""
+    },
+
+    iv: {
+        type: String,
+        default: ""
+    },
+
     fileUrl: {
         type: String,
         default: ""
@@ -52,10 +62,32 @@ const messageSchema = new mongoose.Schema({
         default: null
     },
 
+
+
     mimeType: {
         type: String,
         default: ""
-    }
+    },
+
+    encryptionData: {
+        type: mongoose.Schema.Types.Mixed,
+        default: null
+    },
+
+    deletedFor: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User"
+    }],
+
+    isDeletedForEveryone: {
+        type: Boolean,
+        default: false
+    },
+
+    deletedAt: {
+        type: Date,
+        default: null
+    },
 }, {
     timestamps: true
 });
