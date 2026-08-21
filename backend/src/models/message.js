@@ -47,6 +47,25 @@ const messageSchema = new mongoose.Schema({
         default: ""
     },
 
+
+    encryptedKeys: [{
+        user: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+            required: true
+        },
+
+        encryptedKey: {
+            type: String,
+            required: true
+        },
+
+        keyVersion: {
+            type: Number,
+            required: true
+        }
+    }],
+
     fileUrl: {
         type: String,
         default: ""

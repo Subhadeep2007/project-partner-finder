@@ -1,4 +1,4 @@
-import { registerUser, verifyEmail as verifyEmailService, resendVerificationOTP as resendVerificationOTPService, loginUser, refreshAccessToken, logoutUser, forgotPassword, resetPassword, changePassword } from "../../services/auth/auth.service.js";
+import { registerUser, verifyEmail as verifyEmailService, resendVerificationOTP as resendVerificationOTPService, loginUser, refreshAccessToken, logoutUser, forgotPassword, resetPassword, changePassword, registerE2EEPublicKey } from "../../services/auth/auth.service.js";
 
 const register = async(req, res, next) => {
     try {
@@ -139,6 +139,31 @@ const changePasswordController = async(req, res, next) => {
     }
 };
 
+
+const registerE2EEPublicKeyController = async(
+    req,
+    res,
+    next
+) => {
+    try {
+        const result =
+            await registerE2EEPublicKey({
+                userId: req.user.userId,
+                publicKey: req.body.publicKey,
+                keyVersion: req.body.keyVersion
+            });
+
+        return res.status(200).json({
+            success: true,
+            message: "E2EE public key registered successfully",
+            data: result
+        });
+
+    } catch (error) {
+        next(error);
+    }
+};
+
 export {
     register,
     verifyEmail,
@@ -148,6 +173,7 @@ export {
     logout,
     forgotPasswordController,
     resetPasswordController,
-    changePasswordController
+    changePasswordController,
+    registerE2EEPublicKeyController
 
 };

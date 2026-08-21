@@ -4,7 +4,8 @@ import {
     getProjectById,
     updateProject,
     deleteProject,
-    getAllProjects
+    getAllProjects,
+    getProjectE2EEKeys
 } from "../../services/project/project.service.js";
 
 const createProjectController = async(req, res, next) => {
@@ -111,11 +112,33 @@ const getAllProjectsController = async(req, res, next) => {
         next(error);
     }
 };
+
+
+const getProjectE2EEKeysController = async(
+    req,
+    res,
+    next
+) => {
+    try {
+        const keys = await getProjectE2EEKeys({
+            projectId: req.params.projectId,
+            userId: req.user.userId
+        });
+
+        return res.status(200).json({
+            success: true,
+            data: keys
+        });
+    } catch (error) {
+        next(error);
+    }
+};
 export {
     createProjectController,
     getMyProjectsController,
     getProjectByIdController,
     updateProjectController,
     deleteProjectController,
-    getAllProjectsController
+    getAllProjectsController,
+    getProjectE2EEKeysController
 };

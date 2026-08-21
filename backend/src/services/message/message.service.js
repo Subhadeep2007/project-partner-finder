@@ -1,11 +1,13 @@
 import Message from "../../models/message.js";
 import Project from "../../models/project.js";
 
+
 const createMessage = async({
     projectId,
     senderId,
     encryptedContent,
-    iv
+    iv,
+    encryptedKeys
 }) => {
     // 1. Find project
     const project = await Project.findById(projectId);
@@ -38,13 +40,94 @@ const createMessage = async({
         );
     }
 
-    // 6. Save ciphertext only
+    // 6. Validate encrypted keys
+    if (!Array.isArray(encryptedKeys) ||
+        encryptedKeys.length === 0
+    ) {
+        throw new Error(
+            "Encrypted keys are required"
+        );
+    }
+
+    // 7. Get all authorized participant IDs
+    const authorizedUserIds = [
+        project.owner.toString(),
+        ...project.members.map(
+            (memberId) => memberId.toString()
+        )
+    ];
+
+    // 8. Get encrypted key user IDs
+    const encryptedKeyUserIds =
+        encryptedKeys.map(
+            (key) => String(key.user)
+        );
+
+    // 9. Validate every encrypted key object
+    const hasInvalidKey =
+        encryptedKeys.some(
+            (key) =>
+            !key.user ||
+            !key.encryptedKey ||
+            key.keyVersion === undefined ||
+            key.keyVersion === null
+        );
+
+    if (hasInvalidKey) {
+        throw new Error(
+            "Invalid encrypted key data"
+        );
+    }
+
+    // 10. Check for duplicate users
+    const uniqueEncryptedKeyUserIds =
+        new Set(encryptedKeyUserIds);
+
+    if (
+        uniqueEncryptedKeyUserIds.size !==
+        encryptedKeyUserIds.length
+    ) {
+        throw new Error(
+            "Duplicate encrypted keys are not allowed"
+        );
+    }
+
+    // 11. Every encrypted key must belong
+    // to an authorized project participant
+    const hasUnauthorizedUser =
+        encryptedKeyUserIds.some(
+            (userId) =>
+            !authorizedUserIds.includes(userId)
+        );
+
+    if (hasUnauthorizedUser) {
+        throw new Error(
+            "Encrypted key contains unauthorized user"
+        );
+    }
+
+    // 12. Every authorized participant
+    // must have an encrypted key
+    const hasMissingUser =
+        authorizedUserIds.some(
+            (userId) =>
+            !encryptedKeyUserIds.includes(userId)
+        );
+
+    if (hasMissingUser) {
+        throw new Error(
+            "Missing encrypted key for a project participant"
+        );
+    }
+
+    // 13. Save encrypted message
     const message = await Message.create({
         project: projectId,
         sender: senderId,
         messageType: "text",
         encryptedContent,
-        iv
+        iv,
+        encryptedKeys
     });
 
     return message;
@@ -133,19 +216,21 @@ const getProjectMessages = async({
 };
 
 
-
 const markDelivered = async({
     messageId,
     userId
 }) => {
     // 1. Find message
-    const message = await Message.findById(messageId);
+    const message = await Message.findById(
+        messageId
+    );
 
     if (!message) {
         throw new Error("Message not found");
     }
 
-    // 2. Sender cannot mark own message as delivered
+    // 2. Sender cannot mark own message
+    // as delivered
     if (message.sender.toString() === userId) {
         throw new Error(
             "Sender cannot mark their own message as delivered"
@@ -173,13 +258,16 @@ const markRead = async({
     userId
 }) => {
     // 1. Find message
-    const message = await Message.findById(messageId);
+    const message = await Message.findById(
+        messageId
+    );
 
     if (!message) {
         throw new Error("Message not found");
     }
 
-    // 2. Sender cannot mark own message as read
+    // 2. Sender cannot mark own message
+    // as read
     if (message.sender.toString() === userId) {
         throw new Error(
             "Sender cannot mark their own message as read"
@@ -215,11 +303,11 @@ const markRead = async({
 };
 
 
-
 const deleteMessageForMe = async({
     messageId,
     userId
 }) => {
+    // 1. Find message
     const message = await Message.findById(
         messageId
     );
@@ -228,7 +316,7 @@ const deleteMessageForMe = async({
         throw new Error("Message not found");
     }
 
-    // Check project access
+    // 2. Check project access
     const project = await Project.findById(
         message.project
     );
@@ -252,6 +340,7 @@ const deleteMessageForMe = async({
         );
     }
 
+    // 3. Prevent duplicate delete
     const alreadyDeleted =
         message.deletedFor.some(
             (deletedUserId) =>
@@ -260,7 +349,6 @@ const deleteMessageForMe = async({
 
     if (!alreadyDeleted) {
         message.deletedFor.push(userId);
-
         await message.save();
     }
 
@@ -272,6 +360,7 @@ const deleteMessageForEveryone = async({
     messageId,
     userId
 }) => {
+    // 1. Find message
     const message = await Message.findById(
         messageId
     );
@@ -280,13 +369,14 @@ const deleteMessageForEveryone = async({
         throw new Error("Message not found");
     }
 
-    // Only sender can delete for everyone
+    // 2. Only sender can delete for everyone
     if (message.sender.toString() !== userId) {
         throw new Error(
             "Only the sender can delete this message for everyone"
         );
     }
 
+    // 3. Delete for everyone
     if (!message.isDeletedForEveryone) {
         message.isDeletedForEveryone = true;
         message.deletedAt = new Date();
@@ -296,6 +386,8 @@ const deleteMessageForEveryone = async({
 
     return message;
 };
+
+
 export {
     createMessage,
     getProjectMessages,

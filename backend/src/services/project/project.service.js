@@ -186,11 +186,69 @@ const getAllProjects = async({
     };
 };
 
+
+const getProjectE2EEKeys = async({
+    projectId,
+    userId
+}) => {
+    // 1. Find project with owner and members
+    const project = await Project.findById(projectId)
+        .populate(
+            "owner",
+            "name e2eePublicKey e2eeKeyVersion"
+        )
+        .populate(
+            "members",
+            "name e2eePublicKey e2eeKeyVersion"
+        );
+
+    if (!project) {
+        throw new Error("Project not found");
+    }
+
+    // 2. Check current user's access
+    const isOwner =
+        project.owner._id.toString() === userId;
+
+    const isMember =
+        project.members.some(
+            (member) =>
+            member._id.toString() === userId
+        );
+
+    if (!isOwner && !isMember) {
+        throw new Error(
+            "You are not authorized to access E2EE keys for this project"
+        );
+    }
+
+    // 3. Combine owner + accepted members
+    const users = [
+        project.owner,
+        ...project.members
+    ];
+
+    // 4. Return only users with registered public keys
+    const keys = users
+        .filter(
+            (user) => user.e2eePublicKey
+        )
+        .map((user) => ({
+            userId: user._id,
+            name: user.name,
+            publicKey: user.e2eePublicKey,
+            keyVersion: user.e2eeKeyVersion
+        }));
+
+    return keys;
+};
+
 export {
     createProject,
     getMyProjects,
     getProjectById,
     updateProject,
     deleteProject,
-    getAllProjects
+    getAllProjects,
+    getProjectE2EEKeys
 };

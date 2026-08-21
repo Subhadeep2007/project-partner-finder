@@ -122,7 +122,8 @@ const initializeSocket = (server) => {
                     const {
                         projectId,
                         encryptedContent,
-                        iv
+                        iv,
+                        encryptedKeys
                     } = data;
 
                     // 1. Get authenticated sender
@@ -133,7 +134,8 @@ const initializeSocket = (server) => {
                         projectId,
                         senderId,
                         encryptedContent,
-                        iv
+                        iv,
+                        encryptedKeys
                     });
 
                     // 3. Send message to everyone in project room

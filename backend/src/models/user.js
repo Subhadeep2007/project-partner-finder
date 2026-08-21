@@ -139,6 +139,17 @@ const userSchema = new mongoose.Schema({
         trim: true,
         default: ""
     },
+
+
+    e2eePublicKey: {
+        type: String,
+        default: ""
+    },
+
+    e2eeKeyVersion: {
+        type: Number,
+        default: 1
+    },
 }, {
     timestamps: true
 });

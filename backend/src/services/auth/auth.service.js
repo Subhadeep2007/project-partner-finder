@@ -394,6 +394,42 @@ const changePassword = async({
     };
 };
 
+
+const registerE2EEPublicKey = async({
+    userId,
+    publicKey,
+    keyVersion
+}) => {
+    // 1. Validate public key
+    if (!publicKey || !publicKey.trim()) {
+        throw new Error(
+            "E2EE public key is required"
+        );
+    }
+
+    // 2. Find user
+    const user = await User.findById(userId);
+
+    if (!user) {
+        throw new Error("User not found");
+    }
+
+    // 3. Save public key
+    user.e2eePublicKey = publicKey.trim();
+
+    // 4. Update key version if provided
+    if (keyVersion !== undefined) {
+        user.e2eeKeyVersion = keyVersion;
+    }
+
+    await user.save();
+
+    return {
+        e2eePublicKey: user.e2eePublicKey,
+        e2eeKeyVersion: user.e2eeKeyVersion
+    };
+};
+
 export {
     registerUser,
     verifyEmail,
@@ -403,6 +439,7 @@ export {
     logoutUser,
     forgotPassword,
     resetPassword,
-    changePassword
+    changePassword,
+    registerE2EEPublicKey
 
 };

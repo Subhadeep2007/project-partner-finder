@@ -9,7 +9,8 @@ import {
     logout,
     forgotPasswordController,
     resetPasswordController,
-    changePasswordController
+    changePasswordController,
+    registerE2EEPublicKeyController
 } from "../controllers/auth/auth.controller.js";
 
 import validate from "../middleware/validate.middleware.js";
@@ -79,6 +80,12 @@ router.post(
     authMiddleware,
     validate(changePasswordSchema),
     changePasswordController
+);
+
+router.post(
+    "/e2ee/public-key",
+    authMiddleware,
+    registerE2EEPublicKeyController
 );
 
 export default router;

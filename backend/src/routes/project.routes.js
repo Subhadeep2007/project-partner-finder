@@ -6,7 +6,8 @@ import {
     getProjectByIdController,
     updateProjectController,
     deleteProjectController,
-    getAllProjectsController
+    getAllProjectsController,
+    getProjectE2EEKeysController
 } from "../controllers/project/project.controller.js";
 
 import authMiddleware from "../middleware/auth.middleware.js";
@@ -31,6 +32,12 @@ router.get(
     "/my",
     authMiddleware,
     getMyProjectsController
+);
+
+router.get(
+    "/:projectId/e2ee-keys",
+    authMiddleware,
+    getProjectE2EEKeysController
 );
 router.get(
     "/:projectId",
