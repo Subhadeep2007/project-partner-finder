@@ -48,6 +48,8 @@ const initializeSocket = (server) => {
     });
 
     io.on("connection", (socket) => {
+        socket.join(`user:${socket.user.userId}`);
+
         console.log(
             "Socket connected:",
             socket.id,

@@ -10,6 +10,7 @@ import joinRequestRoutes from "./routes/joinRequest.routes.js";
 import messageRoutes from "./routes/message.routes.js";
 
 import messageUploadRoutes from "./routes/messageUpload.routes.js";
+import notificationRoutes from "./routes/notification.routes.js";
 const app = express();
 
 // Security middleware
@@ -50,5 +51,9 @@ app.use(
 app.use("/api/v1", joinRequestRoutes);
 app.use("/api/v1", messageRoutes);
 app.use("/api/v1", messageUploadRoutes);
+app.use(
+    "/api/v1/notifications",
+    notificationRoutes
+);
 app.use(errorMiddleware);
 export default app;

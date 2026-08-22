@@ -2,6 +2,10 @@ import Project from "../../models/project.js";
 import JoinRequest from "../../models/joinRequest.js";
 import User from "../../models/User.js";
 import sendEmail from "../../utils/sendEmail.js";
+import {
+    createNotification
+} from "../../services/notification/notification.service.js";
+import { getIO } from "../../socket/socket.js";
 const sendJoinRequest = async(projectId, userId) => {
     // 1. Find project
     const project = await Project.findById(projectId);
@@ -58,7 +62,16 @@ const sendJoinRequest = async(projectId, userId) => {
         project: projectId,
         user: userId
     });
+    const user = await User.findById(userId);
 
+    await createNotification({
+        recipient: project.owner,
+        sender: userId,
+        type: "join_request",
+        title: "New Join Request",
+        message: `${user?.name || "A user"} wants to join your project "${project.title}"`,
+        project: project._id
+    });
     return joinRequest;
 };
 const getIncomingJoinRequests = async(userId) => {
@@ -159,7 +172,34 @@ const acceptJoinRequest = async(requestId, ownerId) => {
     // 10. Update request status
     joinRequest.status = "accepted";
     await joinRequest.save();
+    await createNotification({
+        recipient: joinRequest.user,
+        sender: ownerId,
+        type: "join_accepted",
+        title: "Join Request Accepted",
+        message: `Your request to join "${project.title}" has been accepted.`,
+        project: project._id
+    });
 
+    try {
+        const io = getIO();
+
+        io.to(
+            `project:${project._id.toString()}`
+        ).emit(
+            "member_joined", {
+                projectId: project._id,
+                memberId: joinRequest.user,
+                currentMembers: project.currentMembers,
+                teamSize: project.teamSize
+            }
+        );
+    } catch (error) {
+        console.error(
+            "Real-time member joined event failed:",
+            error.message
+        );
+    }
     // 11. Get applicant details
     const user = await User.findById(
         joinRequest.user
@@ -226,7 +266,14 @@ const rejectJoinRequest = async(requestId, ownerId) => {
     // 5. Update request
     joinRequest.status = "rejected";
     await joinRequest.save();
-
+    await createNotification({
+        recipient: joinRequest.user,
+        sender: ownerId,
+        type: "join_rejected",
+        title: "Join Request Rejected",
+        message: `Your request to join "${project.title}" was not accepted.`,
+        project: project._id
+    });
     // 6. Get applicant details
     const user = await User.findById(
         joinRequest.user
@@ -308,7 +355,37 @@ const leaveProject = async(projectId, userId) => {
 
     // 7. Get leaving member details
     const member = await User.findById(userId);
+    // 8. Create notification for project owner
+    await createNotification({
+        recipient: project.owner,
+        sender: userId,
+        type: "member_left",
+        title: "Member Left Project",
+        message: `${member?.name || "A member"} has left your project "${project.title}".`,
+        project: project._id
+    });
 
+
+    try {
+        const io = getIO();
+
+        io.to(
+            `project:${project._id.toString()}`
+        ).emit(
+            "member_left", {
+                projectId: project._id,
+                memberId: userId,
+                currentMembers: project.currentMembers,
+                teamSize: project.teamSize,
+                status: project.status
+            }
+        );
+    } catch (error) {
+        console.error(
+            "Real-time member left event failed:",
+            error.message
+        );
+    }
     // 8. Get project owner details
     const owner = await User.findById(project.owner);
 
