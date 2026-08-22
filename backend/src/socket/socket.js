@@ -10,6 +10,28 @@ import {
 } from "../services/message/message.service.js";
 let io;
 const onlineUsers = new Map();
+const emitPresenceToUserProjects = async(
+    userId,
+    eventName
+) => {
+    const projects = await Project.find({
+        $or: [
+            { owner: userId },
+            { members: userId }
+        ]
+    }).select("_id");
+
+    projects.forEach((project) => {
+        io.to(
+            `project:${project._id.toString()}`
+        ).emit(
+            eventName, {
+                userId,
+                projectId: project._id
+            }
+        );
+    });
+};
 const initializeSocket = (server) => {
     io = new Server(server, {
         cors: {
@@ -56,11 +78,15 @@ const initializeSocket = (server) => {
         }
 
         onlineUsers.get(userId).add(socket.id);
-        socket.broadcast.emit(
-            "user_online", {
-                userId
-            }
-        );
+        emitPresenceToUserProjects(
+            userId,
+            "user_online"
+        ).catch((error) => {
+            console.error(
+                "User online presence error:",
+                error.message
+            );
+        });
         console.log(
             "Socket connected:",
             socket.id,
@@ -104,7 +130,39 @@ const initializeSocket = (server) => {
 
                     // 5. Join Socket.IO room
                     socket.join(`project:${projectId}`);
+                    const onlineMemberIds = project.members
+                        .filter((memberId) =>
+                            onlineUsers.has(memberId.toString())
+                        )
+                        .map((memberId) =>
+                            memberId.toString()
+                        );
 
+                    // Include owner too if online
+                    if (
+                        onlineUsers.has(project.owner.toString())
+                    ) {
+                        onlineMemberIds.push(
+                            project.owner.toString()
+                        );
+                    }
+
+                    socket.emit(
+                        "project_online_members", {
+                            projectId,
+                            onlineMembers: onlineMemberIds
+                        }
+                    );
+
+                    // 👇 YAHAN ADD KARO
+                    socket.to(
+                        `project:${projectId}`
+                    ).emit(
+                        "project_member_online", {
+                            projectId,
+                            userId: socket.user.userId
+                        }
+                    );
                     console.log(
                         `User ${userId} joined project chat ${projectId}`
                     );
@@ -341,6 +399,33 @@ const initializeSocket = (server) => {
                 }
             }
         );
+
+        socket.on("disconnecting", () => {
+            const userId = socket.user.userId;
+
+            const userSockets = onlineUsers.get(userId);
+
+            // Only emit offline if this is the last active socket
+            if (userSockets && userSockets.size === 1) {
+                const joinedRooms = [
+                    ...socket.rooms
+                ].filter((room) =>
+                    room.startsWith("project:")
+                );
+
+                joinedRooms.forEach((room) => {
+                    socket.to(room).emit(
+                        "project_member_offline", {
+                            projectId: room.replace(
+                                "project:",
+                                ""
+                            ),
+                            userId
+                        }
+                    );
+                });
+            }
+        });
         socket.on("disconnect", () => {
             const userId = socket.user.userId;
 
@@ -353,13 +438,33 @@ const initializeSocket = (server) => {
                 // User has no active tabs/devices
                 if (userSockets.size === 0) {
                     onlineUsers.delete(userId);
-
-                    // Notify other users
-                    socket.broadcast.emit(
-                        "user_offline", {
-                            userId
-                        }
+                    const joinedRooms = [
+                        ...socket.rooms
+                    ].filter((room) =>
+                        room.startsWith("project:")
                     );
+
+                    joinedRooms.forEach((room) => {
+                        socket.to(room).emit(
+                            "project_member_offline", {
+                                projectId: room.replace(
+                                    "project:",
+                                    ""
+                                ),
+                                userId
+                            }
+                        );
+                    });
+                    // Notify other users
+                    emitPresenceToUserProjects(
+                        userId,
+                        "user_offline"
+                    ).catch((error) => {
+                        console.error(
+                            "User offline presence error:",
+                            error.message
+                        );
+                    });
                 }
             }
 
