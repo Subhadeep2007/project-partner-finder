@@ -9,7 +9,7 @@ import {
     deleteMessageForEveryone
 } from "../services/message/message.service.js";
 let io;
-
+const onlineUsers = new Map();
 const initializeSocket = (server) => {
     io = new Server(server, {
         cors: {
@@ -49,7 +49,18 @@ const initializeSocket = (server) => {
 
     io.on("connection", (socket) => {
         socket.join(`user:${socket.user.userId}`);
+        const userId = socket.user.userId;
 
+        if (!onlineUsers.has(userId)) {
+            onlineUsers.set(userId, new Set());
+        }
+
+        onlineUsers.get(userId).add(socket.id);
+        socket.broadcast.emit(
+            "user_online", {
+                userId
+            }
+        );
         console.log(
             "Socket connected:",
             socket.id,
@@ -115,6 +126,35 @@ const initializeSocket = (server) => {
                         message: "Failed to join project chat"
                     });
                 }
+            }
+        );
+
+
+        socket.on(
+            "typing_start",
+            ({ projectId }) => {
+                socket.to(
+                    `project:${projectId}`
+                ).emit(
+                    "user_typing", {
+                        projectId,
+                        userId: socket.user.userId
+                    }
+                );
+            }
+        );
+
+        socket.on(
+            "typing_stop",
+            ({ projectId }) => {
+                socket.to(
+                    `project:${projectId}`
+                ).emit(
+                    "user_stopped_typing", {
+                        projectId,
+                        userId: socket.user.userId
+                    }
+                );
             }
         );
         socket.on(
@@ -302,6 +342,27 @@ const initializeSocket = (server) => {
             }
         );
         socket.on("disconnect", () => {
+            const userId = socket.user.userId;
+
+            // Remove this socket from user's active sockets
+            const userSockets = onlineUsers.get(userId);
+
+            if (userSockets) {
+                userSockets.delete(socket.id);
+
+                // User has no active tabs/devices
+                if (userSockets.size === 0) {
+                    onlineUsers.delete(userId);
+
+                    // Notify other users
+                    socket.broadcast.emit(
+                        "user_offline", {
+                            userId
+                        }
+                    );
+                }
+            }
+
             console.log(
                 "Socket disconnected:",
                 socket.id
