@@ -1,5 +1,20 @@
 import Joi from "joi";
 
+const passwordRule = Joi.string()
+    .min(8)
+    .pattern(/[a-z]/)
+    .pattern(/[A-Z]/)
+    .pattern(/[0-9]/)
+    .pattern(/[^A-Za-z0-9]/)
+    .required()
+    .messages({
+        "string.min": "Password must be at least 8 characters long",
+
+        "string.pattern.base": "Password must contain uppercase, lowercase, number and special character",
+
+        "any.required": "Password is required"
+    });
+
 const registerSchema = Joi.object({
     name: Joi.string()
         .trim()
@@ -13,9 +28,7 @@ const registerSchema = Joi.object({
         .trim()
         .required(),
 
-    password: Joi.string()
-        .min(8)
-        .required()
+    password: passwordRule
 });
 
 const loginSchema = Joi.object({
@@ -62,20 +75,15 @@ const resetPasswordSchema = Joi.object({
         .pattern(/^[0-9]+$/)
         .required(),
 
-    newPassword: Joi.string()
-        .min(8)
-        .required()
+    newPassword: passwordRule
 });
 
 const changePasswordSchema = Joi.object({
     currentPassword: Joi.string()
         .required(),
 
-    newPassword: Joi.string()
-        .min(8)
-        .required()
+    newPassword: passwordRule
 });
-
 
 const resendVerificationSchema = Joi.object({
     email: Joi.string()
@@ -85,7 +93,6 @@ const resendVerificationSchema = Joi.object({
         .required()
 });
 
-
 export {
     registerSchema,
     loginSchema,
@@ -94,5 +101,4 @@ export {
     resetPasswordSchema,
     changePasswordSchema,
     resendVerificationSchema
-
 };
