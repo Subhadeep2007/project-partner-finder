@@ -26,7 +26,7 @@ import {
 } from "../validators/auth.validator.js";
 
 import authMiddleware from "../middleware/auth.middleware.js";
-
+import authRateLimiter from "../middleware/rateLimit.middleware.js";
 const router = express.Router();
 
 router.post(
@@ -37,18 +37,21 @@ router.post(
 
 router.post(
     "/verify-email",
+    authRateLimiter,
     validate(verifyEmailSchema),
     verifyEmail
 );
 
 router.post(
     "/resend-verification",
+    authRateLimiter,
     validate(resendVerificationSchema),
     resendVerificationOTP
 );
 
 router.post(
     "/login",
+    authRateLimiter,
     validate(loginSchema),
     login
 );
@@ -65,12 +68,14 @@ router.post(
 
 router.post(
     "/forgot-password",
+    authRateLimiter,
     validate(forgotPasswordSchema),
     forgotPasswordController
 );
 
 router.post(
     "/reset-password",
+    authRateLimiter,
     validate(resetPasswordSchema),
     resetPasswordController
 );
