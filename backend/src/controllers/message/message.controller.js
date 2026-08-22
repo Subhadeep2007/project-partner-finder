@@ -1,6 +1,8 @@
 import {
-    getProjectMessages
+    getProjectMessages,
+    getUnreadCount
 } from "../../services/message/message.service.js";
+
 
 const getProjectMessagesController = async(
     req,
@@ -28,6 +30,30 @@ const getProjectMessagesController = async(
     }
 };
 
+
+const getUnreadCountController = async(
+    req,
+    res,
+    next
+) => {
+    try {
+        const result = await getUnreadCount({
+            projectId: req.params.projectId,
+            userId: req.user.userId
+        });
+
+        return res.status(200).json({
+            success: true,
+            data: result
+        });
+
+    } catch (error) {
+        next(error);
+    }
+};
+
+
 export {
-    getProjectMessagesController
+    getProjectMessagesController,
+    getUnreadCountController
 };

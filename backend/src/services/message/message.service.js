@@ -302,7 +302,61 @@ const markRead = async({
     return message;
 };
 
+const markProjectMessagesAsRead = async({
+    projectId,
+    userId
+}) => {
+    // 1. Find project
+    const project = await Project.findById(projectId);
 
+    if (!project) {
+        throw new Error("Project not found");
+    }
+
+    // 2. Check access
+    const isOwner =
+        project.owner.toString() === userId;
+
+    const isMember = project.members.some(
+        (memberId) =>
+        memberId.toString() === userId
+    );
+
+    if (!isOwner && !isMember) {
+        throw new Error(
+            "You are not authorized to access this project chat"
+        );
+    }
+
+    // 3. Mark all unread messages as read
+    const result = await Message.updateMany({
+        project: projectId,
+
+        sender: {
+            $ne: userId
+        },
+
+        readBy: {
+            $ne: userId
+        },
+
+        deletedFor: {
+            $ne: userId
+        },
+
+        isDeletedForEveryone: false
+    }, {
+        $addToSet: {
+            readBy: userId,
+            deliveredTo: userId
+        }
+    });
+
+    return {
+        projectId,
+        modifiedCount: result.modifiedCount
+    };
+};
 const deleteMessageForMe = async({
     messageId,
     userId
@@ -355,7 +409,63 @@ const deleteMessageForMe = async({
     return message;
 };
 
+const getUnreadCount = async({
+    projectId,
+    userId
+}) => {
+    // 1. Check project
+    const project = await Project.findById(projectId);
 
+    if (!project) {
+        throw new Error("Project not found");
+    }
+
+    // 2. Check project access
+    const isOwner =
+        project.owner.toString() === userId;
+
+    const isMember =
+        project.members.some(
+            (memberId) =>
+            memberId.toString() === userId
+        );
+
+    if (!isOwner && !isMember) {
+        throw new Error(
+            "You are not authorized to access this project chat"
+        );
+    }
+
+    // 3. Count messages that:
+    // - belong to this project
+    // - were not sent by current user
+    // - have not been read by current user
+    // - are not deleted for current user
+    // - are not deleted for everyone
+    const unreadCount =
+        await Message.countDocuments({
+            project: projectId,
+
+            sender: {
+                $ne: userId
+            },
+
+            readBy: {
+                $ne: userId
+            },
+
+            deletedFor: {
+                $ne: userId
+            },
+
+            isDeletedForEveryone: false
+        });
+
+    return {
+        projectId,
+        unreadCount
+    };
+};
 const deleteMessageForEveryone = async({
     messageId,
     userId
@@ -393,6 +503,8 @@ export {
     getProjectMessages,
     markDelivered,
     markRead,
+    markProjectMessagesAsRead,
     deleteMessageForMe,
-    deleteMessageForEveryone
+    deleteMessageForEveryone,
+    getUnreadCount
 };

@@ -419,10 +419,106 @@ const leaveProject = async(projectId, userId) => {
         status: project.status
     };
 };
+
+const removeProjectMember = async(
+    projectId,
+    ownerId,
+    memberId
+) => {
+    // 1. Find project
+    const project = await Project.findById(projectId);
+
+    if (!project) {
+        throw new Error("Project not found");
+    }
+
+    // 2. Only project owner can remove a member
+    if (project.owner.toString() !== ownerId) {
+        throw new Error(
+            "You are not authorized to remove members from this project"
+        );
+    }
+
+    // 3. Owner cannot remove themselves
+    if (project.owner.toString() === memberId) {
+        throw new Error(
+            "Project owner cannot be removed as a member"
+        );
+    }
+
+    // 4. Check if the user is actually a member
+    const isMember = project.members.some(
+        (userId) =>
+        userId.toString() === memberId
+    );
+
+    if (!isMember) {
+        throw new Error(
+            "User is not a member of this project"
+        );
+    }
+
+    // 5. Remove member
+    project.members = project.members.filter(
+        (userId) =>
+        userId.toString() !== memberId
+    );
+
+    // 6. Decrease member count
+    project.currentMembers = Math.max(
+        project.currentMembers - 1,
+        1
+    );
+
+    // 7. Reopen project if there is now space
+    if (
+        project.status === "closed" &&
+        project.currentMembers < project.teamSize
+    ) {
+        project.status = "open";
+    }
+
+    // 8. Save project
+    await project.save();
+
+    // 9. Get removed member
+    const removedMember = await User.findById(
+        memberId
+    );
+
+    // 10. Send notification email
+    if (removedMember) {
+        await sendEmail({
+            to: removedMember.email,
+            subject: `Removed from Project - ${project.title}`,
+            html: `
+                <h2>Hello ${removedMember.name}</h2>
+
+                <p>
+                    You have been removed from the project
+                    <strong>${project.title}</strong>.
+                </p>
+
+                <p>
+                    You can explore and join other projects
+                    on Project Partner Finder.
+                </p>
+            `
+        });
+    }
+
+    return {
+        projectId: project._id,
+        removedMemberId: memberId,
+        currentMembers: project.currentMembers,
+        status: project.status
+    };
+};
 export {
     sendJoinRequest,
     getIncomingJoinRequests,
     acceptJoinRequest,
     rejectJoinRequest,
-    leaveProject
+    leaveProject,
+    removeProjectMember
 };

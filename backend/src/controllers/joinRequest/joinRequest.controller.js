@@ -3,7 +3,8 @@ import {
     getIncomingJoinRequests,
     acceptJoinRequest,
     rejectJoinRequest,
-    leaveProject
+    leaveProject,
+    removeProjectMember
 } from "../../services/joinRequest/joinRequest.service.js";
 
 const sendJoinRequestController = async(req, res, next) => {
@@ -104,10 +105,33 @@ const leaveProjectController = async(
         next(error);
     }
 };
+
+const removeProjectMemberController = async(
+    req,
+    res,
+    next
+) => {
+    try {
+        const result = await removeProjectMember(
+            req.params.projectId,
+            req.user.userId,
+            req.params.memberId
+        );
+
+        return res.status(200).json({
+            success: true,
+            message: "Project member removed successfully",
+            data: result
+        });
+    } catch (error) {
+        next(error);
+    }
+};
 export {
     sendJoinRequestController,
     getIncomingJoinRequestsController,
     acceptJoinRequestController,
     rejectJoinRequestController,
-    leaveProjectController
+    leaveProjectController,
+    removeProjectMemberController
 };

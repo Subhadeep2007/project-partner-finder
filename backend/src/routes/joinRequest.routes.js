@@ -7,7 +7,8 @@ import {
     getIncomingJoinRequestsController,
     acceptJoinRequestController,
     rejectJoinRequestController,
-    leaveProjectController
+    leaveProjectController,
+    removeProjectMemberController
 } from "../controllers/joinRequest/joinRequest.controller.js";
 
 const router = express.Router();
@@ -39,5 +40,11 @@ router.patch(
     "/projects/:projectId/leave",
     authMiddleware,
     leaveProjectController
+);
+
+router.delete(
+    "/projects/:projectId/members/:memberId",
+    authMiddleware,
+    removeProjectMemberController
 );
 export default router;
