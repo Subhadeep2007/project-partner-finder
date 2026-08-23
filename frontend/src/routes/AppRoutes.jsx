@@ -12,7 +12,7 @@ import ProfilePage from "../pages/ProfilePage";
 import ProjectsPage from "../pages/ProjectsPage";
 import ProjectDetailsPage from "../pages/ProjectDetailsPage";
 import NotificationsPage from "../pages/NotificationsPage";
-
+import AppLayout from "../components/layout/AppLayout";
 import NotFoundPage from "../pages/NotFoundPage";
 
 import ProtectedRoute from "./ProtectedRoute";
@@ -54,33 +54,38 @@ const AppRoutes = () => {
 
             {/* Protected Routes */}
 
-            <Route element={<ProtectedRoute />}>
-                <Route
-                    path="/dashboard"
-                    element={<DashboardPage />}
-                />
+<Route element={<ProtectedRoute />}>
 
-                <Route
-                    path="/profile"
-                    element={<ProfilePage />}
-                />
+    <Route element={<AppLayout />}>
 
-                <Route
-                    path="/projects"
-                    element={<ProjectsPage />}
-                />
+        <Route
+            path="/dashboard"
+            element={<DashboardPage />}
+        />
 
-                <Route
-                    path="/projects/:projectId"
-                    element={<ProjectDetailsPage />}
-                />
+        <Route
+            path="/profile"
+            element={<ProfilePage />}
+        />
 
-                <Route
-                    path="/notifications"
-                    element={<NotificationsPage />}
-                />
-            </Route>
+        <Route
+            path="/projects"
+            element={<ProjectsPage />}
+        />
 
+        <Route
+            path="/projects/:projectId"
+            element={<ProjectDetailsPage />}
+        />
+
+        <Route
+            path="/notifications"
+            element={<NotificationsPage />}
+        />
+
+    </Route>
+
+</Route>
             {/* 404 Route */}
 
             <Route
@@ -88,6 +93,9 @@ const AppRoutes = () => {
                 element={<NotFoundPage />}
             />
         </Routes>
+
+
+
     );
 };
 

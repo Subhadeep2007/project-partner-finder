@@ -220,7 +220,7 @@ const refreshAccessToken = async(refreshToken) => {
     try {
         const decoded = jwt.verify(
             refreshToken,
-            process.env.REFRESH_TOKEN_SECRET
+            process.env.JWT_SECRET
         );
 
         if (decoded.userId !== user._id.toString()) {
