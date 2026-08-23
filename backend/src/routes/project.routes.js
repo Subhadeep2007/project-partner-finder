@@ -7,6 +7,7 @@ import {
     updateProjectController,
     deleteProjectController,
     getAllProjectsController,
+    updateProjectStatusController,
     getProjectE2EEKeysController
 } from "../controllers/project/project.controller.js";
 
@@ -51,7 +52,11 @@ router.patch(
     validate(updateProjectSchema),
     updateProjectController
 );
-
+router.patch(
+    "/:projectId/status",
+    authMiddleware,
+    updateProjectStatusController
+);
 router.delete(
     "/:projectId",
     authMiddleware,

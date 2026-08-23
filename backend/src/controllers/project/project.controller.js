@@ -5,6 +5,7 @@ import {
     updateProject,
     deleteProject,
     getAllProjects,
+    updateProjectStatus,
     getProjectE2EEKeys
 } from "../../services/project/project.service.js";
 
@@ -113,7 +114,30 @@ const getAllProjectsController = async(req, res, next) => {
     }
 };
 
+const updateProjectStatusController = async(
+    req,
+    res,
+    next
+) => {
+    try {
 
+        const project =
+            await updateProjectStatus(
+                req.params.projectId,
+                req.user.userId,
+                req.body.status
+            );
+
+        return res.status(200).json({
+            success: true,
+            message: `Project ${project.status} successfully`,
+            data: project
+        });
+
+    } catch (error) {
+        next(error);
+    }
+};
 const getProjectE2EEKeysController = async(
     req,
     res,
@@ -140,5 +164,6 @@ export {
     updateProjectController,
     deleteProjectController,
     getAllProjectsController,
+    updateProjectStatusController,
     getProjectE2EEKeysController
 };

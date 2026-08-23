@@ -48,7 +48,19 @@ const updateProject = async(
 
     return response.data;
 };
+const updateProjectStatus = async(
+    projectId,
+    status
+) => {
+    const response =
+        await api.patch(
+            `/projects/${projectId}/status`, {
+                status
+            }
+        );
 
+    return response.data;
+};
 const deleteProject = async(projectId) => {
     const response =
         await api.delete(
@@ -64,5 +76,6 @@ export {
     getProjectById,
     createProject,
     updateProject,
-    deleteProject
+    deleteProject,
+    updateProjectStatus
 };

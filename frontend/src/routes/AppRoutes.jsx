@@ -6,7 +6,7 @@ import RegisterPage from "../pages/RegisterPage";
 import VerifyEmailPage from "../pages/VerifyEmailPage";
 import ForgotPasswordPage from "../pages/ForgotPasswordPage";
 import ResetPasswordPage from "../pages/ResetPasswordPage";
-
+import EditProjectPage from "../pages/EditProjectPage";
 import DashboardPage from "../pages/DashboardPage";
 import ProfilePage from "../pages/ProfilePage";
 import ProjectsPage from "../pages/ProjectsPage";
@@ -14,7 +14,7 @@ import ProjectDetailsPage from "../pages/ProjectDetailsPage";
 import NotificationsPage from "../pages/NotificationsPage";
 import AppLayout from "../components/layout/AppLayout";
 import NotFoundPage from "../pages/NotFoundPage";
-
+import CreateProjectPage from "../pages/CreateProjectPage";
 import ProtectedRoute from "./ProtectedRoute";
 
 const AppRoutes = () => {
@@ -72,7 +72,15 @@ const AppRoutes = () => {
             path="/projects"
             element={<ProjectsPage />}
         />
+<Route
+    path="/projects/create"
+    element={<CreateProjectPage />}
+/>
 
+<Route
+    path="/projects/:projectId/edit"
+    element={<EditProjectPage />}
+/>
         <Route
             path="/projects/:projectId"
             element={<ProjectDetailsPage />}

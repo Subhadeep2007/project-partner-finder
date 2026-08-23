@@ -185,7 +185,40 @@ const getAllProjects = async({
         }
     };
 };
+const updateProjectStatus = async(
+    projectId,
+    userId,
+    status
+) => {
+    const project = await Project.findById(
+        projectId
+    );
 
+    if (!project) {
+        throw new Error("Project not found");
+    }
+
+    // Only owner can change project status
+    if (
+        project.owner.toString() !== userId
+    ) {
+        throw new Error(
+            "You are not authorized to update this project status"
+        );
+    }
+
+    if (!["open", "closed"].includes(status)) {
+        throw new Error(
+            "Invalid project status"
+        );
+    }
+
+    project.status = status;
+
+    await project.save();
+
+    return project;
+};
 
 const getProjectE2EEKeys = async({
     projectId,
@@ -250,5 +283,6 @@ export {
     updateProject,
     deleteProject,
     getAllProjects,
+    updateProjectStatus,
     getProjectE2EEKeys
 };
