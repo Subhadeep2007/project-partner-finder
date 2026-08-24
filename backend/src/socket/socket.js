@@ -9,7 +9,8 @@ import {
     markRead,
     markProjectMessagesAsRead,
     deleteMessageForMe,
-    deleteMessageForEveryone
+    deleteMessageForEveryone,
+    editMessage
 } from "../services/message/message.service.js";
 
 
@@ -221,7 +222,33 @@ const initializeSocket = (server) => {
                         }
                     }
 
+                    socket.on(
+                        "request_message_rekey",
+                        ({
+                            projectId,
+                            targetUserId
+                        }) => {
 
+                            if (!projectId ||
+                                !targetUserId
+                            ) {
+                                return;
+                            }
+
+
+                            socket
+                                .to(
+                                    `project:${projectId}`
+                                )
+                                .emit(
+                                    "request_message_rekey", {
+                                        projectId,
+                                        targetUserId
+                                    }
+                                );
+
+                        }
+                    );
                     // Send current online members
                     socket.emit(
                         "project_online_members", {
@@ -842,7 +869,68 @@ const initializeSocket = (server) => {
 
             }
         );
+        socket.on(
+            "edit_message",
+            async(data, callback) => {
 
+                try {
+
+                    const {
+                        messageId,
+                        encryptedContent,
+                        iv,
+                        encryptedKeys
+                    } = data || {};
+
+                    if (!messageId) {
+                        throw new Error(
+                            "Message ID is required"
+                        );
+                    }
+
+                    const message =
+                        await editMessage({
+                            messageId,
+                            userId,
+                            encryptedContent,
+                            iv,
+                            encryptedKeys
+                        });
+
+                    io.to(
+                        `project:${message.project.toString()}`
+                    ).emit(
+                        "message_edited",
+                        message
+                    );
+
+                    if (
+                        typeof callback ===
+                        "function"
+                    ) {
+                        return callback({
+                            success: true,
+                            message: "Message edited successfully",
+                            data: message
+                        });
+                    }
+
+                } catch (error) {
+
+                    if (
+                        typeof callback ===
+                        "function"
+                    ) {
+                        return callback({
+                            success: false,
+                            message: error.message
+                        });
+                    }
+
+                }
+
+            }
+        );
 
         // ==========================================
         // DISCONNECTING

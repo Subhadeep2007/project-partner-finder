@@ -17,6 +17,7 @@ import NotFoundPage from "../pages/NotFoundPage";
 import CreateProjectPage from "../pages/CreateProjectPage";
 import ProtectedRoute from "./ProtectedRoute";
 import IncomingJoinRequestsPage from "../pages/IncomingJoinRequestsPage";
+import ChatPage from "../pages/ChatPage";
 const AppRoutes = () => {
     return (
         <Routes>
@@ -80,6 +81,11 @@ const AppRoutes = () => {
 <Route
     path="/projects/:projectId/edit"
     element={<EditProjectPage />}
+/>
+
+<Route
+    path="/projects/:projectId/chat"
+    element={<ChatPage />}
 />
         <Route
             path="/projects/:projectId"

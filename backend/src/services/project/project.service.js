@@ -23,22 +23,34 @@ const getMyProjects = async(userId) => {
     return projects;
 };
 
-
 const getProjectById = async(projectId) => {
-    const project = await Project.findById(projectId)
-        .populate(
-            "owner",
-            "name profileImage skills"
-        );
+
+    const project =
+        await Project.findById(projectId)
+
+    .populate(
+        "owner",
+        "name profileImage skills bio location college course github linkedin portfolio"
+    )
+
+    .populate(
+        "members",
+        "name profileImage skills bio location college course github linkedin portfolio"
+    );
+
 
     if (!project) {
-        throw new Error("Project not found");
+
+        throw new Error(
+            "Project not found"
+        );
+
     }
 
+
     return project;
+
 };
-
-
 const updateProject = async(
     projectId,
     userId,
@@ -262,16 +274,45 @@ const getProjectE2EEKeys = async({
     ];
 
     // 4. Return only users with registered public keys
-    const keys = users
-        .filter(
-            (user) => user.e2eePublicKey
-        )
-        .map((user) => ({
-            userId: user._id,
-            name: user.name,
-            publicKey: user.e2eePublicKey,
-            keyVersion: user.e2eeKeyVersion
-        }));
+    const usersWithoutKeys =
+        users.filter(
+            (user) =>
+            !user.e2eePublicKey
+        );
+
+
+    if (usersWithoutKeys.length > 0) {
+
+        const names =
+            usersWithoutKeys
+            .map(
+                (user) =>
+                user.name ||
+                user._id.toString()
+            )
+            .join(", ");
+
+
+        throw new Error(
+            `E2EE public key is missing for: ${names}`
+        );
+
+    }
+
+
+    const keys =
+        users.map(
+            (user) => ({
+                userId: user._id.toString(),
+
+                name: user.name,
+
+                publicKey: user.e2eePublicKey,
+
+                keyVersion: user.e2eeKeyVersion || 1
+            })
+        );
+
 
     return keys;
 };

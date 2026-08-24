@@ -13,7 +13,15 @@ const messageSchema = new mongoose.Schema({
         ref: "User",
         required: true
     },
+    isEdited: {
+        type: Boolean,
+        default: false
+    },
 
+    editedAt: {
+        type: Date,
+        default: null
+    },
 
     deliveredTo: [{
         type: mongoose.Schema.Types.ObjectId,
@@ -70,7 +78,15 @@ const messageSchema = new mongoose.Schema({
         type: String,
         default: ""
     },
+    filePublicId: {
+        type: String,
+        default: ""
+    },
 
+    fileResourceType: {
+        type: String,
+        default: ""
+    },
     fileName: {
         type: String,
         default: ""

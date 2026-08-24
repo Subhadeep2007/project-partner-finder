@@ -1,7 +1,7 @@
 import Message from "../../models/message.js";
 import Project from "../../models/project.js";
 
-
+import cloudinary from "../../config/cloudinary.js";
 const createMessage = async({
     projectId,
     senderId,
@@ -129,7 +129,10 @@ const createMessage = async({
         iv,
         encryptedKeys
     });
-
+    await message.populate(
+        "sender",
+        "name email profileImage"
+    );
     return message;
 };
 
@@ -470,31 +473,306 @@ const deleteMessageForEveryone = async({
     messageId,
     userId
 }) => {
+
     // 1. Find message
     const message = await Message.findById(
         messageId
     );
 
     if (!message) {
-        throw new Error("Message not found");
+        throw new Error(
+            "Message not found"
+        );
     }
 
+
     // 2. Only sender can delete for everyone
-    if (message.sender.toString() !== userId) {
+    if (
+        message.sender.toString() !== userId
+    ) {
         throw new Error(
             "Only the sender can delete this message for everyone"
         );
     }
 
-    // 3. Delete for everyone
-    if (!message.isDeletedForEveryone) {
-        message.isDeletedForEveryone = true;
-        message.deletedAt = new Date();
 
-        await message.save();
+    // 3. If already deleted
+    if (message.isDeletedForEveryone) {
+        return message;
     }
 
+
+    // 4. Delete uploaded file from Cloudinary
+    if (message.filePublicId) {
+
+        try {
+
+            await cloudinary.uploader.destroy(
+                message.filePublicId, {
+                    resource_type: message.fileResourceType ||
+                        "image"
+                }
+            );
+
+        } catch (error) {
+
+            console.error(
+                "Cloudinary file deletion failed:",
+                error.message
+            );
+
+            // Important:
+            // Database message deletion should still continue.
+        }
+
+    }
+
+
+    // 5. Soft delete message for everyone
+    message.isDeletedForEveryone = true;
+
+    message.deletedAt = new Date();
+
+
+    // Optional: remove file URL so it
+    // cannot be shown in the frontend anymore
+
+    message.fileUrl = "";
+
+
+    await message.save();
+
+
+    return {
+        messageId: message._id,
+        projectId: message.project,
+        isDeletedForEveryone: message.isDeletedForEveryone
+    };
+};
+
+const addEncryptedKeyForUser = async({
+    messageId,
+    projectId,
+    requesterId,
+    targetUserId,
+    encryptedKey,
+    keyVersion
+}) => {
+
+    if (!messageId ||
+        !projectId ||
+        !requesterId ||
+        !targetUserId ||
+        !encryptedKey
+    ) {
+        throw new Error(
+            "Message re-key data is incomplete"
+        );
+    }
+
+
+    const project =
+        await Project.findById(
+            projectId
+        );
+
+
+    if (!project) {
+        throw new Error(
+            "Project not found"
+        );
+    }
+
+
+    // requester must already have project access
+    const isOwner =
+        project.owner.toString() ===
+        requesterId;
+
+
+    const isMember =
+        project.members.some(
+            (memberId) =>
+            memberId.toString() ===
+            requesterId
+        );
+
+
+    if (!isOwner && !isMember) {
+        throw new Error(
+            "You are not authorized to update message keys"
+        );
+    }
+
+
+    // target must be current project participant
+    const targetIsOwner =
+        project.owner.toString() ===
+        targetUserId;
+
+
+    const targetIsMember =
+        project.members.some(
+            (memberId) =>
+            memberId.toString() ===
+            targetUserId
+        );
+
+
+    if (!targetIsOwner &&
+        !targetIsMember
+    ) {
+        throw new Error(
+            "Target user is not a project participant"
+        );
+    }
+
+
+    const message =
+        await Message.findOne({
+            _id: messageId,
+            project: projectId
+        });
+
+
+    if (!message) {
+        throw new Error(
+            "Message not found"
+        );
+    }
+
+
+    const alreadyExists =
+        message.encryptedKeys.some(
+            (item) =>
+            item.user.toString() ===
+            targetUserId
+        );
+
+
+    if (!alreadyExists) {
+
+        message.encryptedKeys.push({
+
+            user: targetUserId,
+
+            encryptedKey,
+
+            keyVersion: keyVersion || 1
+
+        });
+
+        await message.save();
+
+    }
+
+
     return message;
+
+};
+
+const editMessage = async({
+    messageId,
+    userId,
+    encryptedContent,
+    iv,
+    encryptedKeys
+}) => {
+
+    if (!messageId ||
+        !userId ||
+        !encryptedContent ||
+        !iv ||
+        !Array.isArray(encryptedKeys) ||
+        encryptedKeys.length === 0
+    ) {
+
+        throw new Error(
+            "Encrypted edited message data is incomplete"
+        );
+
+    }
+
+
+    const message =
+        await Message.findById(
+            messageId
+        );
+
+
+    if (!message) {
+
+        throw new Error(
+            "Message not found"
+        );
+
+    }
+
+
+    // Only original sender can edit
+    if (
+        message.sender.toString() !==
+        userId
+    ) {
+
+        throw new Error(
+            "Only the sender can edit this message"
+        );
+
+    }
+
+
+    if (
+        message.isDeletedForEveryone
+    ) {
+
+        throw new Error(
+            "Deleted message cannot be edited"
+        );
+
+    }
+
+
+    // Text messages only
+    if (
+        message.messageType !==
+        "text"
+    ) {
+
+        throw new Error(
+            "Only text messages can be edited"
+        );
+
+    }
+
+
+    message.encryptedContent =
+        encryptedContent;
+
+    message.iv =
+        iv;
+
+    message.encryptedKeys =
+        encryptedKeys;
+
+    message.isEdited =
+        true;
+
+    message.editedAt =
+        new Date();
+
+
+    await message.save();
+
+
+    await message.populate(
+        "sender",
+        "name email profileImage"
+    );
+
+
+    return message;
+
 };
 
 
@@ -506,5 +784,7 @@ export {
     markProjectMessagesAsRead,
     deleteMessageForMe,
     deleteMessageForEveryone,
-    getUnreadCount
+    getUnreadCount,
+    addEncryptedKeyForUser,
+    editMessage
 };
