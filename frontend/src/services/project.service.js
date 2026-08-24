@@ -69,7 +69,14 @@ const deleteProject = async(projectId) => {
 
     return response.data;
 };
+const sendJoinRequest = async(projectId) => {
+    const response =
+        await api.post(
+            `/projects/${projectId}/join-request`
+        );
 
+    return response.data;
+};
 export {
     getMyProjects,
     getAllProjects,
@@ -77,5 +84,6 @@ export {
     createProject,
     updateProject,
     deleteProject,
-    updateProjectStatus
+    updateProjectStatus,
+    sendJoinRequest
 };

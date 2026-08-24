@@ -9,9 +9,17 @@ import {
     getMyProjects
 } from "../services/project.service";
 
+import {
+    getIncomingJoinRequests
+} from "../services/joinRequest.service";
+
+
 const DashboardPage = () => {
 
     const [projects, setProjects] =
+        useState([]);
+
+    const [incomingRequests, setIncomingRequests] =
         useState([]);
 
     const [loading, setLoading] =
@@ -20,26 +28,37 @@ const DashboardPage = () => {
     const [error, setError] =
         useState("");
 
+
     useEffect(() => {
 
-        const fetchProjects = async () => {
+        const fetchDashboardData = async () => {
 
             try {
+
                 setLoading(true);
                 setError("");
 
-                const response =
-                    await getMyProjects();
+                const [
+                    projectsResponse,
+                    requestsResponse
+                ] = await Promise.all([
+                    getMyProjects(),
+                    getIncomingJoinRequests()
+                ]);
 
                 setProjects(
-                    response.data || []
+                    projectsResponse.data || []
+                );
+
+                setIncomingRequests(
+                    requestsResponse.data || []
                 );
 
             } catch (error) {
 
                 setError(
                     error.response?.data?.message ||
-                    "Failed to load projects"
+                    "Failed to load dashboard"
                 );
 
             } finally {
@@ -50,9 +69,10 @@ const DashboardPage = () => {
 
         };
 
-        fetchProjects();
+        fetchDashboardData();
 
     }, []);
+
 
     return (
         <section className="dashboard">
@@ -60,6 +80,7 @@ const DashboardPage = () => {
             <div className="dashboard__header">
 
                 <div>
+
                     <p className="dashboard__terminal">
                         ~/dashboard
                     </p>
@@ -72,7 +93,9 @@ const DashboardPage = () => {
                         Manage your projects and
                         track your work.
                     </p>
+
                 </div>
+
 
                 <Link
                     to="/projects"
@@ -83,26 +106,36 @@ const DashboardPage = () => {
 
             </div>
 
+
             {/* Loading State */}
 
             {loading && (
+
                 <div className="dashboard__state">
-                    Loading projects...
+                    Loading dashboard...
                 </div>
+
             )}
+
 
             {/* Error State */}
 
             {!loading && error && (
+
                 <div className="dashboard__error">
                     {error}
                 </div>
+
             )}
+
 
             {/* Dashboard Content */}
 
             {!loading && !error && (
+
                 <>
+
+                    {/* Stats */}
 
                     <div className="dashboard__stats">
 
@@ -118,7 +151,26 @@ const DashboardPage = () => {
 
                         </div>
 
+
+                        <Link
+                            to="/join-requests"
+                            className="dashboard-stat"
+                        >
+
+                            <p>
+                                Incoming Requests
+                            </p>
+
+                            <strong>
+                                {incomingRequests.length}
+                            </strong>
+
+                        </Link>
+
                     </div>
+
+
+                    {/* Projects Section */}
 
                     <div className="dashboard__projects">
 
@@ -137,6 +189,7 @@ const DashboardPage = () => {
                             </div>
 
                         </div>
+
 
                         {projects.length === 0 ? (
 
@@ -172,9 +225,13 @@ const DashboardPage = () => {
                                                 {project.title}
                                             </h3>
 
+
                                             <p className="dashboard-project-card__description">
+
                                                 {project.description}
+
                                             </p>
+
 
                                             <div className="dashboard-project-card__skills">
 
@@ -191,6 +248,7 @@ const DashboardPage = () => {
                                                 )}
 
                                             </div>
+
 
                                             <div className="dashboard-project-card__footer">
 
@@ -218,10 +276,12 @@ const DashboardPage = () => {
                     </div>
 
                 </>
+
             )}
 
         </section>
     );
 };
+
 
 export default DashboardPage;

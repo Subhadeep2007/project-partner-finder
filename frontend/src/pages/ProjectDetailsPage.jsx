@@ -12,6 +12,10 @@ import {
     updateProjectStatus
 } from "../services/project.service";
 
+import {
+    sendJoinRequest
+} from "../services/joinRequest.service";
+
 
 const getCurrentUserId = () => {
     try {
@@ -43,12 +47,14 @@ const getCurrentUserId = () => {
 
 
 const ProjectDetailsPage = () => {
+
     const { projectId } = useParams();
 
     const navigate = useNavigate();
 
     const currentUserId =
         getCurrentUserId();
+
 
     const [project, setProject] =
         useState(null);
@@ -61,12 +67,20 @@ const ProjectDetailsPage = () => {
 
     const [deleting, setDeleting] =
         useState(false);
-const [updatingStatus, setUpdatingStatus] =
-    useState(false);
+
+    const [updatingStatus, setUpdatingStatus] =
+        useState(false);
+
+    const [sendingRequest, setSendingRequest] =
+        useState(false);
+
 
     useEffect(() => {
-        const fetchProject = async () => {
+
+        const fetchProject = async() => {
+
             try {
+
                 setLoading(true);
                 setError("");
 
@@ -76,20 +90,27 @@ const [updatingStatus, setUpdatingStatus] =
                 setProject(response.data);
 
             } catch (error) {
+
                 setError(
                     error.response?.data?.message ||
                     "Failed to load project"
                 );
+
             } finally {
+
                 setLoading(false);
+
             }
+
         };
 
         fetchProject();
+
     }, [projectId]);
 
 
-    const handleDelete = async () => {
+    const handleDelete = async() => {
+
         const confirmed = window.confirm(
             "Are you sure you want to delete this project?"
         );
@@ -99,6 +120,7 @@ const [updatingStatus, setUpdatingStatus] =
         }
 
         try {
+
             setDeleting(true);
             setError("");
 
@@ -107,73 +129,116 @@ const [updatingStatus, setUpdatingStatus] =
             navigate("/dashboard");
 
         } catch (error) {
+
             setError(
                 error.response?.data?.message ||
                 "Failed to delete project"
             );
 
             setDeleting(false);
+
         }
+
     };
-const handleStatusChange = async() => {
 
-    const newStatus =
-        project.status === "open"
-            ? "closed"
-            : "open";
 
-    try {
+    const handleStatusChange = async() => {
 
-        setUpdatingStatus(true);
-        setError("");
+        const newStatus =
+            project.status === "open"
+                ? "closed"
+                : "open";
 
-        const response =
-            await updateProjectStatus(
-                projectId,
-                newStatus
+        try {
+
+            setUpdatingStatus(true);
+            setError("");
+
+            const response =
+                await updateProjectStatus(
+                    projectId,
+                    newStatus
+                );
+
+            setProject(response.data);
+
+        } catch (error) {
+
+            setError(
+                error.response?.data?.message ||
+                "Failed to update project status"
             );
 
-        setProject(response.data);
+        } finally {
 
-    } catch (error) {
+            setUpdatingStatus(false);
 
-        setError(
-            error.response?.data?.message ||
-            "Failed to update project status"
-        );
+        }
 
-    } finally {
+    };
 
-        setUpdatingStatus(false);
 
-    }
+    const handleJoinRequest = async() => {
 
-};
+        try {
+
+            setSendingRequest(true);
+            setError("");
+
+            const response =
+                await sendJoinRequest(projectId);
+
+            alert(
+                response.message ||
+                "Join request sent successfully"
+            );
+
+        } catch (error) {
+
+            setError(
+                error.response?.data?.message ||
+                "Failed to send join request"
+            );
+
+        } finally {
+
+            setSendingRequest(false);
+
+        }
+
+    };
+
 
     if (loading) {
+
         return (
             <div className="project-details-state">
                 Loading project...
             </div>
         );
+
     }
 
 
     if (error && !project) {
+
         return (
             <div className="project-details-state project-details-state--error">
                 {error}
             </div>
         );
+
     }
 
 
     if (!project) {
+
         return (
             <div className="project-details-state">
                 Project not found.
             </div>
         );
+
     }
 
 
@@ -182,7 +247,18 @@ const handleStatusChange = async() => {
         currentUserId?.toString();
 
 
+    const isMember =
+        project.members?.some(
+            (member) =>
+                member?._id?.toString() ===
+                    currentUserId?.toString() ||
+                member?.toString() ===
+                    currentUserId?.toString()
+        );
+
+
     return (
+
         <div className="project-details-page">
 
             <Link
@@ -196,6 +272,7 @@ const handleStatusChange = async() => {
             <div className="project-details__header">
 
                 <div>
+
                     <p className="project-details__terminal">
                         $ project-details
                     </p>
@@ -203,17 +280,21 @@ const handleStatusChange = async() => {
                     <h1>
                         {project.title}
                     </h1>
+
                 </div>
 
 
                 <div className="project-details__header-right">
 
                     <div className="project-details__status">
-    {project.status?.toUpperCase()}
-</div>
+
+                        {project.status?.toUpperCase()}
+
+                    </div>
 
 
-                    {/* ONLY PROJECT OWNER CAN SEE */}
+                    {/* PROJECT OWNER ACTIONS */}
+
                     {isOwner && (
 
                         <div className="project-details__actions">
@@ -236,18 +317,45 @@ const handleStatusChange = async() => {
                                     ? "Deleting..."
                                     : "Delete"}
                             </button>
-<button
-    type="button"
-    className="project-action project-action--status"
-    onClick={handleStatusChange}
-    disabled={updatingStatus}
->
-    {updatingStatus
-        ? "Updating..."
-        : project.status === "open"
-            ? "Close Project"
-            : "Reopen Project"}
-</button>
+
+
+                            <button
+                                type="button"
+                                className="project-action project-action--status"
+                                onClick={handleStatusChange}
+                                disabled={updatingStatus}
+                            >
+                                {updatingStatus
+                                    ? "Updating..."
+                                    : project.status === "open"
+                                        ? "Close Project"
+                                        : "Reopen Project"}
+                            </button>
+
+                        </div>
+
+                    )}
+
+
+                    {/* NORMAL USER JOIN REQUEST */}
+
+                    {!isOwner &&
+                        !isMember &&
+                        project.status === "open" && (
+
+                        <div className="project-details__actions">
+
+                            <button
+                                type="button"
+                                className="project-action project-action--join"
+                                onClick={handleJoinRequest}
+                                disabled={sendingRequest}
+                            >
+                                {sendingRequest
+                                    ? "Sending Request..."
+                                    : "Request to Join"}
+                            </button>
+
                         </div>
 
                     )}
@@ -258,9 +366,11 @@ const handleStatusChange = async() => {
 
 
             {error && (
+
                 <div className="project-details-error">
                     {error}
                 </div>
+
             )}
 
 
@@ -291,9 +401,11 @@ const handleStatusChange = async() => {
 
                             {project.requiredSkills?.map(
                                 (skill) => (
+
                                     <span key={skill}>
                                         {skill}
                                     </span>
+
                                 )
                             )}
 
@@ -341,7 +453,10 @@ const handleStatusChange = async() => {
             </div>
 
         </div>
+
     );
+
 };
+
 
 export default ProjectDetailsPage;

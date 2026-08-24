@@ -16,7 +16,7 @@ import AppLayout from "../components/layout/AppLayout";
 import NotFoundPage from "../pages/NotFoundPage";
 import CreateProjectPage from "../pages/CreateProjectPage";
 import ProtectedRoute from "./ProtectedRoute";
-
+import IncomingJoinRequestsPage from "../pages/IncomingJoinRequestsPage";
 const AppRoutes = () => {
     return (
         <Routes>
@@ -85,7 +85,10 @@ const AppRoutes = () => {
             path="/projects/:projectId"
             element={<ProjectDetailsPage />}
         />
-
+<Route
+    path="/join-requests"
+    element={<IncomingJoinRequestsPage />}
+/>
         <Route
             path="/notifications"
             element={<NotificationsPage />}
