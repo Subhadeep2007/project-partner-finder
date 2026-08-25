@@ -1,16 +1,40 @@
 import Project from "../../models/project.js";
 
-const createProject = async(userId, projectData) => {
-    const project = await Project.create({
-        title: projectData.title,
-        description: projectData.description,
-        requiredSkills: projectData.requiredSkills,
-        teamSize: projectData.teamSize,
+const createProject = async(
+    userId,
+    projectData
+) => {
 
-        owner: userId
-    });
+    const project =
+        await Project.create({
+
+            title: projectData.title,
+
+            description: projectData.description,
+
+            stage: projectData.stage,
+
+            githubRepo: projectData.githubRepo,
+
+            requiredSkills: projectData.requiredSkills,
+
+            lookingFor: projectData.lookingFor,
+
+            teamSize: projectData.teamSize,
+
+            commitment: projectData.commitment,
+
+            collaborationMode: projectData.collaborationMode,
+
+            deadline: projectData.deadline || null,
+
+            owner: userId
+
+        });
+
 
     return project;
+
 };
 
 

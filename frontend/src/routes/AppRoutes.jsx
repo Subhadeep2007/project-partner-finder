@@ -18,6 +18,7 @@ import CreateProjectPage from "../pages/CreateProjectPage";
 import ProtectedRoute from "./ProtectedRoute";
 import IncomingJoinRequestsPage from "../pages/IncomingJoinRequestsPage";
 import ChatPage from "../pages/ChatPage";
+import PublicProfilePage from "../pages/PublicProfilePage";
 const AppRoutes = () => {
     return (
         <Routes>
@@ -68,7 +69,10 @@ const AppRoutes = () => {
             path="/profile"
             element={<ProfilePage />}
         />
-
+<Route
+    path="/profile/:userId"
+    element={<PublicProfilePage />}
+/>
         <Route
             path="/projects"
             element={<ProjectsPage />}

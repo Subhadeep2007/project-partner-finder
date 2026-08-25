@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 
 const projectSchema = new mongoose.Schema({
+
     title: {
         type: String,
         required: true,
@@ -17,28 +18,89 @@ const projectSchema = new mongoose.Schema({
         maxlength: 2000
     },
 
+    // ==============================
+    // PROJECT STAGE
+    // ==============================
+
+    stage: {
+        type: String,
+        enum: [
+            "idea",
+            "planning",
+            "half-working",
+            "mvp",
+            "working",
+            "completed"
+        ],
+        required: true,
+        default: "idea"
+    },
+
+
+    // ==============================
+    // GITHUB REPOSITORY
+    // ==============================
+
+    githubRepo: {
+        type: String,
+        required: true,
+        trim: true,
+        match: [
+            /^https:\/\/github\.com\/[^\/\s]+\/[^\/\s]+\/?$/,
+            "Please provide a valid GitHub repository URL"
+        ]
+    },
+
+
+    // ==============================
+    // REQUIRED SKILLS
+    // ==============================
+
     requiredSkills: {
         type: [String],
         required: true,
+
         validate: {
             validator: function(skills) {
-                return skills.length > 0;
+
+                return (
+                    Array.isArray(skills) &&
+                    skills.length > 0
+                );
+
             },
+
             message: "At least one required skill is needed"
         }
     },
 
-    owner: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-        required: true
+
+    // ==============================
+    // WHAT TYPE OF PARTNER IS NEEDED
+    // ==============================
+
+    lookingFor: {
+        type: [String],
+
+        enum: [
+            "frontend",
+            "backend",
+            "fullstack",
+            "ai-ml",
+            "data-science",
+            "ui-ux",
+            "devops",
+            "mobile",
+            "other"
+        ],
+
+        default: []
     },
 
 
-    members: [{
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User"
-    }],
+    // ==============================
+    // TEAM SIZE
+    // ==============================
 
     teamSize: {
         type: Number,
@@ -47,23 +109,107 @@ const projectSchema = new mongoose.Schema({
         max: 20
     },
 
+
+    // ==============================
+    // EXPECTED COMMITMENT
+    // ==============================
+
+    commitment: {
+        type: String,
+
+        enum: [
+            "weekend",
+            "part-time",
+            "regular"
+        ],
+
+        default: "part-time"
+    },
+
+
+    // ==============================
+    // COLLABORATION MODE
+    // ==============================
+
+    collaborationMode: {
+        type: String,
+
+        enum: [
+            "remote",
+            "hybrid",
+            "offline"
+        ],
+
+        default: "remote"
+    },
+
+
+    // ==============================
+    // OPTIONAL DEADLINE
+    // ==============================
+
+    deadline: {
+        type: Date,
+        default: null
+    },
+
+
+    // ==============================
+    // OWNER
+    // ==============================
+
+    owner: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        required: true
+    },
+
+
+    // ==============================
+    // PROJECT MEMBERS
+    // ==============================
+
+    members: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User"
+    }],
+
+
+    // ==============================
+    // CURRENT MEMBER COUNT
+    // ==============================
+
     currentMembers: {
         type: Number,
         default: 1
     },
 
+
+    // ==============================
+    // PROJECT STATUS
+    // ==============================
+
     status: {
         type: String,
-        enum: ["open", "closed", "completed"],
+        enum: [
+            "open",
+            "closed",
+            "completed"
+        ],
         default: "open"
     }
+
 }, {
     timestamps: true
 });
 
-const Project = mongoose.model(
-    "Project",
-    projectSchema
-);
+
+const Project =
+    mongoose.models.Project ||
+    mongoose.model(
+        "Project",
+        projectSchema
+    );
+
 
 export default Project;

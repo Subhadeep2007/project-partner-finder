@@ -22,7 +22,8 @@ const notificationSchema = new mongoose.Schema({
             "join_rejected",
             "new_message",
             "member_joined",
-            "member_left"
+            "member_left",
+            "member_removed"
         ],
         required: true
     },

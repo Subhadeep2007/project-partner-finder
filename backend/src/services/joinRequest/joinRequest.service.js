@@ -2,400 +2,1068 @@ import Project from "../../models/project.js";
 import JoinRequest from "../../models/joinRequest.js";
 import User from "../../models/User.js";
 import sendEmail from "../../utils/sendEmail.js";
+
 import {
     createNotification
 } from "../../services/notification/notification.service.js";
-import { getIO } from "../../socket/socket.js";
-const sendJoinRequest = async(projectId, userId) => {
-    // 1. Find project
-    const project = await Project.findById(projectId);
+
+import {
+    getIO
+} from "../../socket/socket.js";
+
+
+// ==========================================
+// SEND / RE-JOIN REQUEST
+// ==========================================
+
+const sendJoinRequest = async(
+    projectId,
+    userId
+) => {
+
+    const project =
+        await Project.findById(
+            projectId
+        );
+
 
     if (!project) {
-        throw new Error("Project not found");
+
+        throw new Error(
+            "Project not found"
+        );
+
     }
 
-    // 2. Project owner cannot join own project
-    if (project.owner.toString() === userId) {
+
+    // OWNER CANNOT JOIN OWN PROJECT
+
+    if (
+        project.owner.toString() ===
+        userId
+    ) {
+
         throw new Error(
             "Project owner cannot send a join request"
         );
+
     }
 
-    // 3. Only open projects can accept requests
-    if (project.status !== "open") {
+
+    // PROJECT MUST BE OPEN
+
+    if (
+        project.status !==
+        "open"
+    ) {
+
         throw new Error(
             "This project is not open for join requests"
         );
+
     }
 
-    // 4. Check if team is already full
-    if (project.currentMembers >= project.teamSize) {
-        throw new Error("Project team is already full");
+
+    // TEAM FULL
+
+    if (
+        project.currentMembers >=
+        project.teamSize
+    ) {
+
+        throw new Error(
+            "Project team is already full"
+        );
+
     }
 
-    // 5. Check if user is already a member
-    const isAlreadyMember = project.members.some(
-        (memberId) =>
-        memberId.toString() === userId
-    );
+
+    // ALREADY MEMBER
+
+    const isAlreadyMember =
+        project.members.some(
+            (memberId) =>
+
+            memberId.toString() ===
+            userId
+
+        );
+
 
     if (isAlreadyMember) {
+
         throw new Error(
             "You are already a member of this project"
         );
+
     }
 
-    // 6. Check existing join request
-    const existingRequest = await JoinRequest.findOne({
-        project: projectId,
-        user: userId
-    });
+
+    // FIND EXISTING REQUEST
+
+    const existingRequest =
+        await JoinRequest.findOne({
+
+            project: projectId,
+
+            user: userId
+
+        });
+
+
+    let joinRequest;
+
+    let isRejoin =
+        false;
+
+
+    // ==========================================
+    // EXISTING REQUEST
+    // ==========================================
 
     if (existingRequest) {
-        throw new Error(
-            `You already have a ${existingRequest.status} join request for this project`
-        );
+
+
+        // PENDING
+
+        if (
+            existingRequest.status ===
+            "pending"
+        ) {
+
+            throw new Error(
+                "You already have a pending join request for this project"
+            );
+
+        }
+
+
+        // ACCEPTED
+
+        if (
+            existingRequest.status ===
+            "accepted"
+        ) {
+
+            throw new Error(
+                "You are already an accepted member of this project"
+            );
+
+        }
+
+
+        // REJECTED / REMOVED / LEFT
+        // REUSE SAME REQUEST
+
+        existingRequest.status =
+            "pending";
+
+
+        existingRequest.removedAt =
+            null;
+
+
+        existingRequest.removedBy =
+            null;
+
+
+        existingRequest.leftAt =
+            null;
+
+
+        existingRequest.rejoinCount =
+            Number(
+                existingRequest.rejoinCount ||
+                0
+            ) + 1;
+
+
+        await existingRequest.save();
+
+
+        joinRequest =
+            existingRequest;
+
+
+        isRejoin =
+            true;
+
+
+    } else {
+
+
+        // BRAND NEW REQUEST
+
+        joinRequest =
+            await JoinRequest.create({
+
+                project: projectId,
+
+                user: userId,
+
+                status: "pending"
+
+            });
+
     }
 
-    // 7. Create join request
-    const joinRequest = await JoinRequest.create({
-        project: projectId,
-        user: userId
-    });
-    const user = await User.findById(userId);
+
+    // ==========================================
+    // GET USER
+    // ==========================================
+
+    const user =
+        await User.findById(
+            userId
+        );
+
+
+    let userName =
+        "A user";
+
+
+    if (
+        user &&
+        user.name
+    ) {
+
+        userName =
+            user.name;
+
+    }
+
+
+    // ==========================================
+    // OWNER NOTIFICATION
+    // ==========================================
+
+    let notificationTitle =
+        "New Join Request";
+
+
+    let notificationMessage =
+        `${userName} wants to join your project "${project.title}"`;
+
+
+    if (isRejoin) {
+
+        notificationTitle =
+            "Re-Join Request";
+
+
+        notificationMessage =
+            `${userName} wants to re-join your project "${project.title}"`;
+
+    }
+
 
     await createNotification({
+
         recipient: project.owner,
+
         sender: userId,
+
         type: "join_request",
-        title: "New Join Request",
-        message: `${user?.name || "A user"} wants to join your project "${project.title}"`,
+
+        title: notificationTitle,
+
+        message: notificationMessage,
+
         project: project._id
+
     });
+
+
+    // ==========================================
+    // OWNER EMAIL
+    // ==========================================
+
+    const owner =
+        await User.findById(
+            project.owner
+        );
+
+
+    if (
+        owner &&
+        owner.email &&
+        user
+    ) {
+
+        let emailSubject =
+            `New Join Request - ${project.title}`;
+
+
+        let actionText =
+            " wants to join ";
+
+
+        if (isRejoin) {
+
+            emailSubject =
+                `Re-Join Request - ${project.title}`;
+
+
+            actionText =
+                " wants to re-join ";
+
+        }
+
+
+        await sendEmail({
+
+            to: owner.email,
+
+            subject: emailSubject,
+
+            html: `
+                <h2>
+                    Hello ${owner.name}
+                </h2>
+
+                <p>
+                    <strong>${user.name}</strong>
+                    ${actionText}
+                    your project
+                    <strong>${project.title}</strong>.
+                </p>
+
+                <p>
+                    Open Project Partner Finder
+                    to review the request.
+                </p>
+
+                <p>
+                    Project Partner Finder 🚀
+                </p>
+            `
+
+        });
+
+    }
+
+
     return joinRequest;
+
 };
-const getIncomingJoinRequests = async(userId) => {
-    // Find all projects owned by logged-in user
-    const projects = await Project.find({
-        owner: userId
-    }).select("_id");
 
-    const projectIds = projects.map(
-        (project) => project._id
-    );
 
-    // Find pending join requests for those projects
-    const requests = await JoinRequest.find({
+// ==========================================
+// GET INCOMING JOIN REQUESTS
+// ==========================================
+
+const getIncomingJoinRequests = async(
+    userId
+) => {
+
+    const projects =
+        await Project.find({
+
+            owner: userId
+
+        }).select(
+            "_id"
+        );
+
+
+    const projectIds =
+        projects.map(
+            (project) =>
+            project._id
+        );
+
+
+    const requests =
+        await JoinRequest.find({
+
             project: {
                 $in: projectIds
             },
+
             status: "pending"
+
         })
-        .populate(
-            "project",
-            "title owner"
-        )
-        .populate(
-            "user",
-            "name email profileImage skills"
-        )
-        .sort({
-            createdAt: -1
-        });
+
+    .populate(
+        "project",
+        "title owner"
+    )
+
+    .populate(
+        "user",
+        "name email profileImage skills"
+    )
+
+    .sort({
+        createdAt:
+            -1
+    });
+
 
     return requests;
+
 };
 
 
-const acceptJoinRequest = async(requestId, ownerId) => {
-    // 1. Find join request
-    const joinRequest = await JoinRequest.findById(requestId);
+// ==========================================
+// ACCEPT JOIN REQUEST
+// ==========================================
+
+const acceptJoinRequest = async(
+    requestId,
+    ownerId
+) => {
+
+    const joinRequest =
+        await JoinRequest.findById(
+            requestId
+        );
+
 
     if (!joinRequest) {
-        throw new Error("Join request not found");
+
+        throw new Error(
+            "Join request not found"
+        );
+
     }
 
-    // 2. Request must be pending
-    if (joinRequest.status !== "pending") {
+
+    if (
+        joinRequest.status !==
+        "pending"
+    ) {
+
         throw new Error(
             `This join request has already been ${joinRequest.status}`
         );
+
     }
 
-    // 3. Find project
-    const project = await Project.findById(
-        joinRequest.project
-    );
+
+    const project =
+        await Project.findById(
+            joinRequest.project
+        );
+
 
     if (!project) {
-        throw new Error("Project not found");
+
+        throw new Error(
+            "Project not found"
+        );
+
     }
 
-    // 4. Only project owner can accept
-    if (project.owner.toString() !== ownerId) {
+
+    // ONLY OWNER
+
+    if (
+        project.owner.toString() !==
+        ownerId
+    ) {
+
         throw new Error(
             "You are not authorized to accept this join request"
         );
+
     }
 
-    // 5. Check if team is full
-    if (project.currentMembers >= project.teamSize) {
-        throw new Error("Project team is already full");
+
+    // TEAM FULL
+
+    if (
+        project.currentMembers >=
+        project.teamSize
+    ) {
+
+        throw new Error(
+            "Project team is already full"
+        );
+
     }
 
-    // 6. Double-check user is not already a member
-    const isAlreadyMember = project.members.some(
-        (memberId) =>
-        memberId.toString() ===
-        joinRequest.user.toString()
-    );
+
+    // ALREADY MEMBER
+
+    const isAlreadyMember =
+        project.members.some(
+            (memberId) =>
+
+            memberId.toString() ===
+            joinRequest.user.toString()
+
+        );
+
 
     if (isAlreadyMember) {
+
         throw new Error(
             "User is already a member of this project"
         );
+
     }
 
-    // 7. Add user to project members
-    project.members.push(joinRequest.user);
 
-    // 8. Update member count
-    project.currentMembers += 1;
+    // ADD MEMBER
 
-    // 9. If team becomes full, close project
-    if (project.currentMembers >= project.teamSize) {
-        project.status = "closed";
+    project.members.push(
+        joinRequest.user
+    );
+
+
+    // INCREASE COUNT
+
+    project.currentMembers +=
+        1;
+
+
+    // CLOSE IF FULL
+
+    if (
+        project.currentMembers >=
+        project.teamSize
+    ) {
+
+        project.status =
+            "closed";
+
     }
+
 
     await project.save();
 
-    // 10. Update request status
-    joinRequest.status = "accepted";
+
+    // UPDATE REQUEST
+
+    joinRequest.status =
+        "accepted";
+
+
+    joinRequest.removedAt =
+        null;
+
+
+    joinRequest.removedBy =
+        null;
+
+
+    joinRequest.leftAt =
+        null;
+
+
     await joinRequest.save();
+
+
+    // NOTIFICATION
+
     await createNotification({
+
         recipient: joinRequest.user,
+
         sender: ownerId,
+
         type: "join_accepted",
+
         title: "Join Request Accepted",
+
         message: `Your request to join "${project.title}" has been accepted.`,
+
         project: project._id
+
     });
 
+
+    // REAL TIME
+
     try {
-        const io = getIO();
+
+        const io =
+            getIO();
+
 
         io.to(
             `project:${project._id.toString()}`
         ).emit(
-            "member_joined", {
+
+            "member_joined",
+
+            {
+
                 projectId: project._id,
+
                 memberId: joinRequest.user,
+
                 currentMembers: project.currentMembers,
+
                 teamSize: project.teamSize
+
             }
+
         );
+
+
     } catch (error) {
+
         console.error(
             "Real-time member joined event failed:",
             error.message
         );
-    }
-    // 11. Get applicant details
-    const user = await User.findById(
-        joinRequest.user
-    );
 
-    // 12. Send acceptance email
-    if (user) {
+    }
+
+
+    // USER
+
+    const user =
+        await User.findById(
+            joinRequest.user
+        );
+
+
+    // ACCEPTANCE EMAIL
+
+    if (
+        user &&
+        user.email
+    ) {
+
         await sendEmail({
+
             to: user.email,
+
             subject: `Join Request Accepted - ${project.title}`,
+
             html: `
-                <h2>Congratulations ${user.name} 🎉</h2>
+                <h2>
+                    Congratulations ${user.name} 🎉
+                </h2>
 
-                <p>Your request to join the project
-                <strong>${project.title}</strong>
-                has been accepted.</p>
+                <p>
+                    Your request to join
+                    <strong>${project.title}</strong>
+                    has been accepted.
+                </p>
 
-                <p>You are now officially a member of the team.</p>
+                <p>
+                    You are now officially a member
+                    of the team.
+                </p>
 
-                <p>Happy building! 🚀</p>
+                <p>
+                    Happy building! 🚀
+                </p>
             `
+
         });
+
     }
+
 
     return {
+
         requestId: joinRequest._id,
+
         status: joinRequest.status,
+
         projectId: project._id
+
     };
+
 };
 
 
-const rejectJoinRequest = async(requestId, ownerId) => {
-    // 1. Find join request
-    const joinRequest = await JoinRequest.findById(requestId);
+// ==========================================
+// REJECT JOIN REQUEST
+// ==========================================
+
+const rejectJoinRequest = async(
+    requestId,
+    ownerId
+) => {
+
+    const joinRequest =
+        await JoinRequest.findById(
+            requestId
+        );
+
 
     if (!joinRequest) {
-        throw new Error("Join request not found");
+
+        throw new Error(
+            "Join request not found"
+        );
+
     }
 
-    // 2. Request must be pending
-    if (joinRequest.status !== "pending") {
+
+    if (
+        joinRequest.status !==
+        "pending"
+    ) {
+
         throw new Error(
             `This join request has already been ${joinRequest.status}`
         );
+
     }
 
-    // 3. Find project
-    const project = await Project.findById(
-        joinRequest.project
-    );
+
+    const project =
+        await Project.findById(
+            joinRequest.project
+        );
+
 
     if (!project) {
-        throw new Error("Project not found");
+
+        throw new Error(
+            "Project not found"
+        );
+
     }
 
-    // 4. Only project owner can reject
-    if (project.owner.toString() !== ownerId) {
+
+    // ONLY OWNER
+
+    if (
+        project.owner.toString() !==
+        ownerId
+    ) {
+
         throw new Error(
             "You are not authorized to reject this join request"
         );
+
     }
 
-    // 5. Update request
-    joinRequest.status = "rejected";
+
+    // REJECT
+
+    joinRequest.status =
+        "rejected";
+
+
     await joinRequest.save();
+
+
+    // NOTIFICATION
+
     await createNotification({
+
         recipient: joinRequest.user,
+
         sender: ownerId,
+
         type: "join_rejected",
+
         title: "Join Request Rejected",
+
         message: `Your request to join "${project.title}" was not accepted.`,
+
         project: project._id
+
     });
-    // 6. Get applicant details
-    const user = await User.findById(
-        joinRequest.user
-    );
 
-    // 7. Send rejection email
-    if (user) {
+
+    // USER
+
+    const user =
+        await User.findById(
+            joinRequest.user
+        );
+
+
+    // EMAIL
+
+    if (
+        user &&
+        user.email
+    ) {
+
         await sendEmail({
+
             to: user.email,
+
             subject: `Join Request Update - ${project.title}`,
+
             html: `
-                <h2>Hello ${user.name}</h2>
+                <h2>
+                    Hello ${user.name}
+                </h2>
 
-                <p>Your request to join
-                <strong>${project.title}</strong>
-                was not accepted at this time.</p>
+                <p>
+                    Your request to join
+                    <strong>${project.title}</strong>
+                    was not accepted at this time.
+                </p>
 
-                <p>Don't worry—there are many more projects
-                waiting for you! 🚀</p>
+                <p>
+                    You can explore other projects
+                    on Project Partner Finder.
+                </p>
             `
+
         });
+
     }
+
 
     return {
+
         requestId: joinRequest._id,
+
         status: joinRequest.status
+
     };
+
 };
 
 
-const leaveProject = async(projectId, userId) => {
-    // 1. Find project
-    const project = await Project.findById(projectId);
+// ==========================================
+// MEMBER LEAVES PROJECT
+// ==========================================
+
+const leaveProject = async(
+    projectId,
+    userId
+) => {
+
+    const project =
+        await Project.findById(
+            projectId
+        );
+
 
     if (!project) {
-        throw new Error("Project not found");
+
+        throw new Error(
+            "Project not found"
+        );
+
     }
 
-    // 2. Owner cannot leave using this route
-    if (project.owner.toString() === userId) {
+
+    // OWNER CANNOT LEAVE
+
+    if (
+        project.owner.toString() ===
+        userId
+    ) {
+
         throw new Error(
             "Project owner cannot leave the project"
         );
+
     }
 
-    // 3. Check if user is a member
-    const isMember = project.members.some(
-        (memberId) =>
-        memberId.toString() === userId
-    );
+
+    // MEMBER CHECK
+
+    const isMember =
+        project.members.some(
+            (memberId) =>
+
+            memberId.toString() ===
+            userId
+
+        );
+
 
     if (!isMember) {
+
         throw new Error(
             "You are not a member of this project"
         );
+
     }
 
-    // 4. Remove member
-    project.members = project.members.filter(
-        (memberId) =>
-        memberId.toString() !== userId
-    );
 
-    // 5. Decrease member count
-    project.currentMembers = Math.max(
-        project.currentMembers - 1,
-        1
-    );
+    // REMOVE MEMBER
 
-    // 6. Reopen project if there is space
+    project.members =
+        project.members.filter(
+            (memberId) =>
+
+            memberId.toString() !==
+            userId
+
+        );
+
+
+    // DECREASE COUNT
+
+    project.currentMembers =
+        Math.max(
+            project.currentMembers - 1,
+            1
+        );
+
+
+    // REOPEN
+
     if (
-        project.status === "closed" &&
-        project.currentMembers < project.teamSize
+        project.status ===
+        "closed" &&
+
+        project.currentMembers <
+        project.teamSize
+
     ) {
-        project.status = "open";
+
+        project.status =
+            "open";
+
     }
+
 
     await project.save();
 
-    // 7. Get leaving member details
-    const member = await User.findById(userId);
-    // 8. Create notification for project owner
+
+    // UPDATE REQUEST LIFECYCLE
+
+    const request =
+        await JoinRequest.findOne({
+
+            project: projectId,
+
+            user: userId
+
+        });
+
+
+    if (request) {
+
+        request.status =
+            "left";
+
+
+        request.leftAt =
+            new Date();
+
+
+        request.removedAt =
+            null;
+
+
+        request.removedBy =
+            null;
+
+
+        await request.save();
+
+    }
+
+
+    // MEMBER
+
+    const member =
+        await User.findById(
+            userId
+        );
+
+
+    let memberName =
+        "A member";
+
+
+    if (
+        member &&
+        member.name
+    ) {
+
+        memberName =
+            member.name;
+
+    }
+
+
+    // OWNER NOTIFICATION
+
     await createNotification({
+
         recipient: project.owner,
+
         sender: userId,
+
         type: "member_left",
+
         title: "Member Left Project",
-        message: `${member?.name || "A member"} has left your project "${project.title}".`,
+
+        message: `${memberName} has left your project "${project.title}".`,
+
         project: project._id
+
     });
 
 
+    // REAL TIME
+
     try {
-        const io = getIO();
+
+        const io =
+            getIO();
+
 
         io.to(
             `project:${project._id.toString()}`
         ).emit(
-            "member_left", {
+
+            "member_left",
+
+            {
+
                 projectId: project._id,
+
                 memberId: userId,
+
                 currentMembers: project.currentMembers,
+
                 teamSize: project.teamSize,
+
                 status: project.status
+
             }
+
         );
+
+
     } catch (error) {
+
         console.error(
             "Real-time member left event failed:",
             error.message
         );
-    }
-    // 8. Get project owner details
-    const owner = await User.findById(project.owner);
 
-    // 9. Send email to owner
-    if (owner && member) {
+    }
+
+
+    // OWNER
+
+    const owner =
+        await User.findById(
+            project.owner
+        );
+
+
+    // OWNER EMAIL
+
+    if (
+        owner &&
+        owner.email &&
+        member
+    ) {
+
         await sendEmail({
+
             to: owner.email,
+
             subject: `Member Left - ${project.title}`,
+
             html: `
-                <h2>Hello ${owner.name}</h2>
+                <h2>
+                    Hello ${owner.name}
+                </h2>
 
                 <p>
                     <strong>${member.name}</strong>
@@ -405,120 +1073,346 @@ const leaveProject = async(projectId, userId) => {
 
                 <p>
                     Current team members:
-                    ${project.currentMembers} / ${project.teamSize}
+                    ${project.currentMembers}
+                    /
+                    ${project.teamSize}
                 </p>
 
-                <p>Project Partner Finder 🚀</p>
+                <p>
+                    Project Partner Finder 🚀
+                </p>
             `
+
         });
+
     }
 
+
     return {
+
         projectId: project._id,
+
         currentMembers: project.currentMembers,
+
         status: project.status
+
     };
+
 };
+
+
+// ==========================================
+// OWNER REMOVES MEMBER
+// ==========================================
 
 const removeProjectMember = async(
     projectId,
     ownerId,
     memberId
 ) => {
-    // 1. Find project
-    const project = await Project.findById(projectId);
+
+    const project =
+        await Project.findById(
+            projectId
+        );
+
 
     if (!project) {
-        throw new Error("Project not found");
+
+        throw new Error(
+            "Project not found"
+        );
+
     }
 
-    // 2. Only project owner can remove a member
-    if (project.owner.toString() !== ownerId) {
+
+    // ONLY OWNER
+
+    if (
+        project.owner.toString() !==
+        ownerId
+    ) {
+
         throw new Error(
             "You are not authorized to remove members from this project"
         );
+
     }
 
-    // 3. Owner cannot remove themselves
-    if (project.owner.toString() === memberId) {
+
+    // OWNER CANNOT REMOVE SELF
+
+    if (
+        project.owner.toString() ===
+        memberId
+    ) {
+
         throw new Error(
             "Project owner cannot be removed as a member"
         );
+
     }
 
-    // 4. Check if the user is actually a member
-    const isMember = project.members.some(
-        (userId) =>
-        userId.toString() === memberId
-    );
+
+    // MEMBER CHECK
+
+    const isMember =
+        project.members.some(
+            (userId) =>
+
+            userId.toString() ===
+            memberId
+
+        );
+
 
     if (!isMember) {
+
         throw new Error(
             "User is not a member of this project"
         );
+
     }
 
-    // 5. Remove member
-    project.members = project.members.filter(
-        (userId) =>
-        userId.toString() !== memberId
-    );
 
-    // 6. Decrease member count
-    project.currentMembers = Math.max(
-        project.currentMembers - 1,
-        1
-    );
+    // REMOVE MEMBER
 
-    // 7. Reopen project if there is now space
+    project.members =
+        project.members.filter(
+            (userId) =>
+
+            userId.toString() !==
+            memberId
+
+        );
+
+
+    // DECREASE COUNT
+
+    project.currentMembers =
+        Math.max(
+            project.currentMembers - 1,
+            1
+        );
+
+
+    // REOPEN PROJECT
+
     if (
-        project.status === "closed" &&
-        project.currentMembers < project.teamSize
+        project.status ===
+        "closed" &&
+
+        project.currentMembers <
+        project.teamSize
+
     ) {
-        project.status = "open";
+
+        project.status =
+            "open";
+
     }
 
-    // 8. Save project
+
+    // SAVE PROJECT
+
     await project.save();
 
-    // 9. Get removed member
-    const removedMember = await User.findById(
-        memberId
-    );
 
-    // 10. Send notification email
-    if (removedMember) {
+    // UPDATE REQUEST
+
+    const joinRequest =
+        await JoinRequest.findOne({
+
+            project: projectId,
+
+            user: memberId
+
+        });
+
+
+    if (joinRequest) {
+
+        joinRequest.status =
+            "removed";
+
+
+        joinRequest.removedAt =
+            new Date();
+
+
+        joinRequest.removedBy =
+            ownerId;
+
+
+        joinRequest.leftAt =
+            null;
+
+
+        await joinRequest.save();
+
+    }
+
+
+    // REMOVED MEMBER
+
+    const removedMember =
+        await User.findById(
+            memberId
+        );
+
+
+    // NOTIFICATION
+
+    await createNotification({
+
+        recipient: memberId,
+
+        sender: ownerId,
+
+        type: "member_removed",
+
+        title: "Removed From Project",
+
+        message: `You have been removed from "${project.title}" by the project owner.`,
+
+        project: project._id
+
+    });
+
+
+    // REAL TIME
+
+    try {
+
+        const io =
+            getIO();
+
+
+        io.to(
+            `project:${project._id.toString()}`
+        ).emit(
+
+            "member_removed",
+
+            {
+
+                projectId: project._id,
+
+                memberId: memberId,
+
+                removedBy: ownerId,
+
+                currentMembers: project.currentMembers,
+
+                teamSize: project.teamSize,
+
+                status: project.status
+
+            }
+
+        );
+
+
+    } catch (error) {
+
+        console.error(
+            "Real-time member removal event failed:",
+            error.message
+        );
+
+    }
+
+
+    // REMOVAL EMAIL
+
+    if (
+        removedMember &&
+        removedMember.email
+    ) {
+
         await sendEmail({
+
             to: removedMember.email,
+
             subject: `Removed from Project - ${project.title}`,
+
             html: `
-                <h2>Hello ${removedMember.name}</h2>
+                <h2>
+                    Hello ${removedMember.name}
+                </h2>
 
                 <p>
-                    You have been removed from the project
+                    You have been removed from
+                    the project
                     <strong>${project.title}</strong>.
                 </p>
 
                 <p>
-                    You can explore and join other projects
-                    on Project Partner Finder.
+                    You can send a new join request
+                    later if the project is open
+                    and has available space.
+                </p>
+
+                <p>
+                    Project Partner Finder 🚀
                 </p>
             `
+
         });
+
     }
 
+
+    // RETURN
+
+    let requestStatus =
+        "removed";
+
+
+    if (
+        joinRequest &&
+        joinRequest.status
+    ) {
+
+        requestStatus =
+            joinRequest.status;
+
+    }
+
+
     return {
+
         projectId: project._id,
+
         removedMemberId: memberId,
+
         currentMembers: project.currentMembers,
-        status: project.status
+
+        status: project.status,
+
+        requestStatus: requestStatus
+
     };
+
 };
+
+
+// ==========================================
+// EXPORT
+// ==========================================
+
 export {
+
     sendJoinRequest,
+
     getIncomingJoinRequests,
+
     acceptJoinRequest,
+
     rejectJoinRequest,
+
     leaveProject,
+
     removeProjectMember
+
 };
