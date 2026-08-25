@@ -1,7 +1,8 @@
 import {
     getMyNotifications,
     markNotificationAsRead,
-    markAllNotificationsAsRead
+    markAllNotificationsAsRead,
+    deleteNotification
 } from "../../services/notification/notification.service.js";
 
 
@@ -73,10 +74,46 @@ const markAllNotificationsAsReadController =
             next(error);
         }
     };
+const deleteNotificationController =
+    async(
+        req,
+        res,
+        next
+    ) => {
 
+        try {
+
+            const result =
+                await deleteNotification({
+
+                    notificationId: req.params.notificationId,
+
+                    userId: req.user.userId
+
+                });
+
+
+            return res.status(200).json({
+
+                success: true,
+
+                message: "Notification deleted successfully",
+
+                data: result
+
+            });
+
+        } catch (error) {
+
+            next(error);
+
+        }
+
+    };
 
 export {
     getMyNotificationsController,
     markNotificationAsReadController,
-    markAllNotificationsAsReadController
+    markAllNotificationsAsReadController,
+    deleteNotificationController
 };

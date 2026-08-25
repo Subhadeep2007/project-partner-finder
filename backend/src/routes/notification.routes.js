@@ -5,7 +5,9 @@ import authMiddleware from "../middleware/auth.middleware.js";
 import {
     getMyNotificationsController,
     markNotificationAsReadController,
-    markAllNotificationsAsReadController
+    markAllNotificationsAsReadController,
+    deleteNotificationController
+
 } from "../controllers/notification/notification.controller.js";
 
 const router = express.Router();
@@ -25,7 +27,12 @@ router.patch(
     authMiddleware,
     markAllNotificationsAsReadController
 );
-
+// Delete single notification
+router.delete(
+    "/:notificationId",
+    authMiddleware,
+    deleteNotificationController
+);
 
 // Mark single notification as read
 router.patch(

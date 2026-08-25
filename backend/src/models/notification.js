@@ -52,7 +52,18 @@ const notificationSchema = new mongoose.Schema({
         type: Boolean,
         default: false,
         index: true
+    },
+
+
+    // SOFT DELETE
+    // ==========================================
+
+    deletedAt: {
+        type: Date,
+        default: null,
+        index: true
     }
+
 }, {
     timestamps: true
 });

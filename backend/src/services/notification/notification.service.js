@@ -2,6 +2,10 @@ import Notification from "../../models/notification.js";
 import { getIO } from "../../socket/socket.js";
 
 
+// ==========================================
+// CREATE NOTIFICATION
+// ==========================================
+
 const createNotification = async({
     recipient,
     sender = null,
@@ -11,22 +15,31 @@ const createNotification = async({
     project = null
 }) => {
 
-    // 1. Notification MongoDB me save hoga
+    // ==========================================
+    // 1. SAVE NOTIFICATION
+    // ==========================================
 
     const notification =
         await Notification.create({
 
             recipient,
+
             sender,
+
             type,
+
             title,
+
             message,
+
             project
 
         });
 
 
-    // 2. Sender ka public profile data
+    // ==========================================
+    // 2. POPULATE SENDER
+    // ==========================================
 
     await notification.populate(
         "sender",
@@ -48,44 +61,59 @@ const createNotification = async({
     );
 
 
-    // 3. Project details populate
+    // ==========================================
+    // 3. POPULATE PROJECT
+    // ==========================================
 
     await notification.populate({
+
         path: "project",
+
         select: `
-            title
-            description
-            requiredSkills
-            teamSize
-            status
-            owner
-            members
-            createdAt
-        `,
+                title
+                description
+                requiredSkills
+                teamSize
+                status
+                owner
+                members
+                createdAt
+            `,
+
         populate: {
+
             path: "owner",
+
             select: `
-                name
-                profileImage
-                bio
-                location
-                college
-                course
-                skills
-                experienceLevel
-                github
-                linkedin
-                portfolio
-            `
+                    name
+                    profileImage
+                    bio
+                    location
+                    college
+                    course
+                    graduationYear
+                    skills
+                    experienceLevel
+                    interests
+                    github
+                    linkedin
+                    portfolio
+                `
+
         }
+
     });
 
 
-    // 4. Real-time notification
+    // ==========================================
+    // 4. REAL-TIME NOTIFICATION
+    // ==========================================
 
     try {
 
-        const io = getIO();
+        const io =
+            getIO();
+
 
         io.to(
             `user:${recipient.toString()}`
@@ -93,6 +121,7 @@ const createNotification = async({
             "new_notification",
             notification
         );
+
 
     } catch (error) {
 
@@ -109,12 +138,19 @@ const createNotification = async({
 };
 
 
+// ==========================================
+// GET MY NOTIFICATIONS
+// ==========================================
 
 const getMyNotifications = async({
     userId,
     page = 1,
     limit = 20
 }) => {
+
+    // ==========================================
+    // PAGINATION
+    // ==========================================
 
     const pageNumber =
         Math.max(
@@ -138,10 +174,22 @@ const getMyNotifications = async({
         limitNumber;
 
 
+    // ==========================================
+    // ONLY ACTIVE NOTIFICATIONS
+    // ==========================================
+
     const filter = {
-        recipient: userId
+
+        recipient: userId,
+
+        deletedAt: null
+
     };
 
+
+    // ==========================================
+    // FETCH DATA
+    // ==========================================
 
     const [
         notifications,
@@ -150,39 +198,58 @@ const getMyNotifications = async({
     ] = await Promise.all([
 
 
-        Notification.find(filter)
+        // ======================================
+        // NOTIFICATIONS
+        // ======================================
+
+        Notification.find(
+            filter
+        )
+
         .sort({
-            createdAt: -1
+            createdAt:
+                -1
         })
-        .skip(skip)
-        .limit(limitNumber)
+
+        .skip(
+            skip
+        )
+
+        .limit(
+            limitNumber
+        )
 
 
-        // Sender full public profile
+        // ======================================
+        // SENDER
+        // ======================================
 
         .populate(
             "sender",
             `
-                    name
-                    profileImage
-                    bio
-                    location
-                    college
-                    course
-                    graduationYear
-                    skills
-                    experienceLevel
-                    interests
-                    github
-                    linkedin
-                    portfolio
-                `
+                name
+                profileImage
+                bio
+                location
+                college
+                course
+                graduationYear
+                skills
+                experienceLevel
+                interests
+                github
+                linkedin
+                portfolio
+            `
         )
 
 
-        // Project + Owner profile
+        // ======================================
+        // PROJECT + OWNER
+        // ======================================
 
         .populate({
+
             path: "project",
 
             select: `
@@ -215,18 +282,33 @@ const getMyNotifications = async({
                         linkedin
                         portfolio
                     `
+
             }
+
         }),
 
+
+        // ======================================
+        // TOTAL ACTIVE NOTIFICATIONS
+        // ======================================
 
         Notification.countDocuments(
             filter
         ),
 
 
+        // ======================================
+        // UNREAD ACTIVE NOTIFICATIONS
+        // ======================================
+
         Notification.countDocuments({
+
             recipient: userId,
-            isRead: false
+
+            isRead: false,
+
+            deletedAt: null
+
         })
 
     ]);
@@ -258,6 +340,9 @@ const getMyNotifications = async({
 };
 
 
+// ==========================================
+// MARK SINGLE NOTIFICATION AS READ
+// ==========================================
 
 const markNotificationAsRead = async({
     notificationId,
@@ -266,8 +351,13 @@ const markNotificationAsRead = async({
 
     const notification =
         await Notification.findOne({
+
             _id: notificationId,
-            recipient: userId
+
+            recipient: userId,
+
+            deletedAt: null
+
         });
 
 
@@ -282,7 +372,9 @@ const markNotificationAsRead = async({
 
     if (!notification.isRead) {
 
-        notification.isRead = true;
+        notification.isRead =
+            true;
+
 
         await notification.save();
 
@@ -294,35 +386,118 @@ const markNotificationAsRead = async({
 };
 
 
+// ==========================================
+// MARK ALL NOTIFICATIONS AS READ
+// ==========================================
 
 const markAllNotificationsAsRead = async(
     userId
 ) => {
 
-    await Notification.updateMany({
+    await Notification.updateMany(
+
+        {
+
             recipient: userId,
-            isRead: false
+
+            isRead: false,
+
+            deletedAt: null
+
         },
 
         {
+
             $set: {
+
                 isRead: true
+
             }
+
         }
+
     );
 
 
     return {
+
         success: true
+
     };
 
 };
 
 
+// ==========================================
+// SOFT DELETE NOTIFICATION
+// ==========================================
+
+const deleteNotification = async({
+    notificationId,
+    userId
+}) => {
+
+    // ==========================================
+    // FIND ONLY CURRENT USER'S ACTIVE NOTIFICATION
+    // ==========================================
+
+    const notification =
+        await Notification.findOne({
+
+            _id: notificationId,
+
+            recipient: userId,
+
+            deletedAt: null
+
+        });
+
+
+    if (!notification) {
+
+        throw new Error(
+            "Notification not found"
+        );
+
+    }
+
+
+    // ==========================================
+    // SOFT DELETE
+    // ==========================================
+
+    notification.deletedAt =
+        new Date();
+
+
+    await notification.save();
+
+
+    return {
+
+        notificationId: notification._id,
+
+        deletedAt: notification.deletedAt
+
+    };
+
+};
+
+
+// ==========================================
+// EXPORT
+// ==========================================
 
 export {
+
     createNotification,
+
     getMyNotifications,
+
     markNotificationAsRead,
-    markAllNotificationsAsRead
+
+    markAllNotificationsAsRead,
+
+    deleteNotification
+
 };

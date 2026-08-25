@@ -38,9 +38,21 @@ const markAllNotificationsAsRead = async() => {
 
 };
 
+const deleteNotification = async(
+    notificationId
+) => {
 
+    const response =
+        await api.delete(
+            `/notifications/${notificationId}`
+        );
+
+    return response.data;
+
+};
 export {
     getMyNotifications,
     markNotificationAsRead,
-    markAllNotificationsAsRead
+    markAllNotificationsAsRead,
+    deleteNotification
 };
