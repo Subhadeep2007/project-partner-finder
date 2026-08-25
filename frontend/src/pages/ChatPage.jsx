@@ -2054,9 +2054,62 @@ const handleSaveEdit = async(
                 setError("");
 
 
-                await deleteMessageForEveryone(
-                    messageId
+               await new Promise(
+    (
+        resolve,
+        reject
+    ) => {
+
+        if (!socket.connected) {
+
+            reject(
+                new Error(
+                    "Chat connection is not available"
+                )
+            );
+
+            return;
+
+        }
+
+
+        socket.emit(
+            "delete_message_for_everyone",
+            {
+                messageId
+            },
+            (
+                response
+            ) => {
+
+                if (
+                    response &&
+                    response.success
+                ) {
+
+                    resolve(
+                        response
+                    );
+
+                    return;
+
+                }
+
+
+                reject(
+                    new Error(
+                        response &&
+                        response.message
+                            ? response.message
+                            : "Failed to delete message for everyone"
+                    )
                 );
+
+            }
+        );
+
+    }
+);
 
 
                 setMessages(
@@ -2226,105 +2279,188 @@ const handleSaveEdit = async(
         };
 
 
-    return (
+   return (
 
-        <section
-            className="chat-page"
+    <main
+        className="
+            !flex
+            !min-h-[calc(100vh-0px)]
+            !w-full
+            !flex-col
+            !overflow-hidden
+            !bg-[#060a0f]
+            !text-white
+        "
+    >
+
+        {/* ==========================================
+            TOP HEADER
+        ========================================== */}
+
+        <header
+            className="
+                !shrink-0
+                !border-b
+                !border-white/10
+                !bg-[#0a1016]/95
+                !px-4
+                !py-4
+                !backdrop-blur-xl
+                sm:!px-6
+                lg:!px-8
+            "
         >
 
-            {/* HEADER */}
-
             <div
-                className="chat-page__header"
+                className="
+                    !mx-auto
+                    !flex
+                    !w-full
+                    !max-w-7xl
+                    !flex-col
+                    !gap-4
+                    sm:!flex-row
+                    sm:!items-center
+                    sm:!justify-between
+                "
             >
-
-                <p
-                    className="chat-page__terminal"
-                >
-                    ~/projects/chat
-                </p>
-
 
                 <div>
 
-                    <h1>
-                        Project Chat
-                    </h1>
+                    <p
+                        className="
+                            !m-0
+                            !font-mono
+                            !text-[11px]
+                            !font-bold
+                            !uppercase
+                            !tracking-[0.2em]
+                            !text-emerald-400
+                        "
+                    >
+                        ~/projects/chat
+                    </p>
 
 
-                    <p>
-                        Communicate with your project team.
+                    <div
+                        className="
+                            !mt-2
+                            !flex
+                            !items-center
+                            !gap-3
+                        "
+                    >
+
+                        <h1
+                            className="
+                                !m-0
+                                !text-xl
+                                !font-black
+                                !tracking-tight
+                                sm:!text-2xl
+                            "
+                        >
+                            Project Chat
+                        </h1>
+
+                    </div>
+
+
+                    <p
+                        className="
+                            !mt-1
+                            !mb-0
+                            !text-xs
+                            !text-slate-500
+                            sm:!text-sm
+                        "
+                    >
+                        Communicate securely with your
+                        project team.
                     </p>
 
                 </div>
 
 
+                {/* CONNECTION STATUS */}
+
                 <div
-                    style={{
-                        marginTop: "12px",
-                        fontSize: "13px"
-                    }}
+                    className="
+                        !inline-flex
+                        !w-fit
+                        !items-center
+                        !gap-2
+                        !rounded-full
+                        !border
+                        !border-white/10
+                        !bg-white/[0.03]
+                        !px-3
+                        !py-2
+                    "
                 >
 
                     <span
-                        style={{
-                            color:
-
+                        className={`
+                            !h-2
+                            !w-2
+                            !rounded-full
+                            ${
                                 socketStatus ===
                                 "connected"
+                                    ? "!bg-emerald-400"
+                                    : socketStatus ===
+                                      "connecting"
+                                        ? "!bg-yellow-400"
+                                        : "!bg-red-400"
+                            }
+                        `}
+                    />
 
-                                    ?
 
-                                    "#22c55e"
-
-                                    :
-
-                                    socketStatus ===
-                                    "connecting"
-
-                                        ?
-
-                                        "#facc15"
-
-                                        :
-
-                                        "#ef4444"
-                        }}
+                    <span
+                        className="
+                            !text-xs
+                            !font-semibold
+                            !text-slate-300
+                        "
                     >
-                        ●
+                        {socketStatus ===
+                        "connected"
+                            ? "Live"
+                            : socketStatus ===
+                              "connecting"
+                                ? "Connecting..."
+                                : "Offline"}
                     </span>
-
-                    {" "}
-
-                    {socketStatus ===
-                    "connected"
-
-                        ?
-
-                        "Live"
-
-                        :
-
-                        socketStatus ===
-                        "connecting"
-
-                            ?
-
-                            "Connecting..."
-
-                            :
-
-                            "Offline"}
 
                 </div>
 
             </div>
 
+        </header>
 
-            {/* CHAT CONTAINER */}
+
+        {/* ==========================================
+            CHAT BODY
+        ========================================== */}
+
+        <section
+            className="
+                !min-h-0
+                !flex-1
+                !overflow-hidden
+            "
+        >
 
             <div
-                className="chat-page__container"
+                className="
+                    !mx-auto
+                    !flex
+                    !h-full
+                    !w-full
+                    !max-w-7xl
+                    !flex-col
+                "
             >
 
                 {/* ERROR */}
@@ -2332,49 +2468,100 @@ const handleSaveEdit = async(
                 {error && (
 
                     <div
-                        className="chat-page__error"
+                        className="
+                            !mx-4
+                            !mt-4
+                            !rounded-xl
+                            !border
+                            !border-red-400/20
+                            !bg-red-400/5
+                            !px-4
+                            !py-3
+                            !text-sm
+                            !text-red-300
+                            sm:!mx-6
+                            lg:!mx-8
+                        "
                     >
 
-                        <span>
-                            {error}
-                        </span>
-
-
-                        <button
-                            type="button"
-                            onClick={
-                                () =>
-                                    setError("")
-                            }
-                            style={{
-                                float: "right",
-                                border: "none",
-                                background: "transparent",
-                                color: "inherit",
-                                cursor: "pointer"
-                            }}
+                        <div
+                            className="
+                                !flex
+                                !items-center
+                                !justify-between
+                                !gap-4
+                            "
                         >
-                            ×
-                        </button>
+
+                            <span>
+                                {error}
+                            </span>
+
+
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    setError("")
+                                }
+                                className="
+                                    !text-lg
+                                    !text-red-300
+                                    !transition
+                                    hover:!text-white
+                                "
+                            >
+                                ×
+                            </button>
+
+                        </div>
 
                     </div>
 
                 )}
 
 
-                {/* MESSAGES */}
+                {/* ======================================
+                    MESSAGE AREA
+                ====================================== */}
 
                 <div
-                    className="chat-page__messages"
+                    className="
+                        !min-h-0
+                        !flex-1
+                        !overflow-y-auto
+                        !px-3
+                        !py-5
+                        sm:!px-6
+                        sm:!py-6
+                        lg:!px-8
+                    "
                 >
 
                     {loading && (
 
                         <div
-                            className="chat-page__state"
+                            className="
+                                !flex
+                                !h-full
+                                !items-center
+                                !justify-center
+                            "
                         >
 
-                            Loading messages...
+                            <div
+                                className="
+                                    !rounded-2xl
+                                    !border
+                                    !border-white/10
+                                    !bg-[#0d151d]
+                                    !px-6
+                                    !py-5
+                                    !text-sm
+                                    !text-slate-400
+                                "
+                            >
+                                Loading messages...
+                            </div>
 
                         </div>
 
@@ -2385,17 +2572,67 @@ const handleSaveEdit = async(
                     messages.length === 0 && (
 
                         <div
-                            className="chat-page__empty"
+                            className="
+                                !flex
+                                !h-full
+                                !items-center
+                                !justify-center
+                            "
                         >
 
-                            <h2>
-                                No messages yet
-                            </h2>
+                            <div
+                                className="
+                                    !max-w-md
+                                    !rounded-3xl
+                                    !border
+                                    !border-white/10
+                                    !bg-[#0d151d]
+                                    !p-8
+                                    !text-center
+                                "
+                            >
 
-                            <p>
-                                Start the conversation
-                                with your project team.
-                            </p>
+                                <div
+                                    className="
+                                        !mx-auto
+                                        !flex
+                                        !h-16
+                                        !w-16
+                                        !items-center
+                                        !justify-center
+                                        !rounded-2xl
+                                        !bg-emerald-400/10
+                                        !text-2xl
+                                    "
+                                >
+                                    💬
+                                </div>
+
+
+                                <h2
+                                    className="
+                                        !mt-5
+                                        !text-xl
+                                        !font-black
+                                    "
+                                >
+                                    No messages yet
+                                </h2>
+
+
+                                <p
+                                    className="
+                                        !mt-2
+                                        !text-sm
+                                        !leading-6
+                                        !text-slate-500
+                                    "
+                                >
+                                    Start a secure conversation
+                                    with your project team.
+                                </p>
+
+                            </div>
 
                         </div>
 
@@ -2403,366 +2640,166 @@ const handleSaveEdit = async(
 
 
                     {!loading &&
+                    messages.length > 0 && (
 
-                        messages.map(
-                            (message) => {
+                        <div
+                            className="
+                                !mx-auto
+                                !flex
+                                !w-full
+                                !max-w-5xl
+                                !flex-col
+                                !gap-4
+                            "
+                        >
 
-                                const senderId =
-                                    getSenderId(
-                                        message
-                                    );
+                            {messages.map(
+                                (message) => {
 
-
-                                const isMyMessage =
-                                    senderId &&
-                                    currentUserId &&
-                                    senderId ===
-                                    currentUserId;
-
-
-                                let profileImage =
-                                    null;
-
-
-                                if (
-                                    message.sender &&
-                                    typeof message.sender ===
-                                    "object" &&
-                                    message.sender.profileImage
-                                ) {
-
-                                    profileImage =
-                                        message.sender.profileImage;
-
-                                }
+                                    const senderId =
+                                        getSenderId(
+                                            message
+                                        );
 
 
-                                const senderName =
-                                    getSenderName(
-                                        message,
-                                        isMyMessage
-                                    );
+                                    const isMyMessage =
+                                        senderId &&
+                                        currentUserId &&
+                                        senderId ===
+                                            currentUserId;
 
 
-                                return (
+                                    let profileImage =
+                                        null;
 
-                                    <div
-                                        key={
-                                            message._id
-                                        }
-                                        style={{
-                                            display: "flex",
 
-                                            justifyContent:
+                                    if (
+                                        message.sender &&
+                                        typeof message.sender ===
+                                            "object" &&
+                                        message.sender
+                                            .profileImage
+                                    ) {
 
-                                                isMyMessage
+                                        profileImage =
+                                            message.sender
+                                                .profileImage;
 
-                                                    ?
+                                    }
 
-                                                    "flex-end"
 
-                                                    :
+                                    const senderName =
+                                        getSenderName(
+                                            message,
+                                            isMyMessage
+                                        );
 
-                                                    "flex-start"
-                                        }}
-                                    >
+
+                                    return (
 
                                         <div
-                                            className="chat-message"
-                                            style={{
-
-                                                position:
-                                                    "relative",
-
-                                                marginLeft:
-
+                                            key={
+                                                message._id
+                                            }
+                                            className={`
+                                                !flex
+                                                !w-full
+                                                ${
                                                     isMyMessage
-
-                                                        ?
-
-                                                        "auto"
-
-                                                        :
-
-                                                        "0",
-
-                                                background:
-
-                                                    isMyMessage
-
-                                                        ?
-
-                                                        "rgba(34, 197, 94, 0.08)"
-
-                                                        :
-
-                                                        undefined,
-
-                                                borderColor:
-
-                                                    isMyMessage
-
-                                                        ?
-
-                                                        "rgba(34, 197, 94, 0.35)"
-
-                                                        :
-
-                                                        undefined
-
-                                            }}
+                                                        ? "!justify-end"
+                                                        : "!justify-start"
+                                                }
+                                            `}
                                         >
 
-                                            {/* HEADER */}
-
-                                            <div
-                                                className="chat-message__header"
+                                            <article
+                                                className={`
+                                                    !w-fit
+                                                    !max-w-[92%]
+                                                    !overflow-visible
+                                                    !rounded-2xl
+                                                    !border
+                                                    !p-3
+                                                    !shadow-lg
+                                                    sm:!max-w-[75%]
+                                                    ${
+                                                        isMyMessage
+                                                            ? "!border-emerald-400/20 !bg-emerald-400/[0.05]"
+                                                            : "!border-white/10 !bg-[#0d151d]"
+                                                    }
+                                                `}
                                             >
 
+                                                {/* MESSAGE HEADER */}
+
                                                 <div
-                                                    className="chat-message__sender"
+                                                    className="
+                                                        !flex
+                                                        !items-center
+                                                        !justify-between
+                                                        !gap-4
+                                                    "
                                                 >
 
-                                                    {!isMyMessage && (
+                                                    <div
+                                                        className="
+                                                            !flex
+                                                            !min-w-0
+                                                            !items-center
+                                                            !gap-3
+                                                        "
+                                                    >
 
-                                                        profileImage
-
-                                                            ?
-
-                                                            <img
-                                                                className="chat-message__avatar"
-                                                                src={
-                                                                    profileImage
-                                                                }
-                                                                alt={
-                                                                    senderName
-                                                                }
-                                                            />
-
-                                                            :
+                                                        {!isMyMessage && (
 
                                                             <div
                                                                 className="
-                                                                    chat-message__avatar
-                                                                    chat-message__avatar--fallback
+                                                                    !h-9
+                                                                    !w-9
+                                                                    !shrink-0
+                                                                    !overflow-hidden
+                                                                    !rounded-xl
+                                                                    !border
+                                                                    !border-white/10
+                                                                    !bg-white/[0.03]
                                                                 "
                                                             >
-                                                                {
-                                                                    getAvatarLetter(
-                                                                        message
-                                                                    )
-                                                                }
-                                                            </div>
 
-                                                    )}
+                                                                {profileImage ? (
 
+                                                                    <img
+                                                                        src={
+                                                                            profileImage
+                                                                        }
+                                                                        alt={
+                                                                            senderName
+                                                                        }
+                                                                        className="
+                                                                            !h-full
+                                                                            !w-full
+                                                                            !object-cover
+                                                                        "
+                                                                    />
 
-                                                    <span>
-                                                        {
-                                                            senderName
-                                                        }
-                                                    </span>
+                                                                ) : (
 
-
-                                                    <small>
-                                                        {
-                                                            formatTime(
-                                                                message.createdAt
-                                                            )
-                                                        }
-                                                    </small>
-
-                                                </div>
-
-
-                                                {!message.isDeletedForEveryone && (
-
-                                                    <div
-                                                        style={{
-                                                            position:
-                                                                "relative"
-                                                        }}
-                                                    >
-
-                                                        <button
-                                                            type="button"
-                                                            onClick={
-                                                                () =>
-
-                                                                    setOpenMenuId(
-
-                                                                        openMenuId ===
-                                                                        message._id
-
-                                                                            ?
-
-                                                                            null
-
-                                                                            :
-
-                                                                            message._id
-
-                                                                    )
-                                                            }
-                                                            style={{
-                                                                border:
-                                                                    "none",
-
-                                                                background:
-                                                                    "transparent",
-
-                                                                color:
-                                                                    "inherit",
-
-                                                                cursor:
-                                                                    "pointer",
-
-                                                                fontSize:
-                                                                    "20px"
-                                                            }}
-                                                        >
-                                                            ⋮
-                                                        </button>
-
-
-                                                        {openMenuId ===
-                                                        message._id && (
-
-                                                            <div
-                                                                style={{
-                                                                    position:
-                                                                        "absolute",
-
-                                                                    right:
-                                                                        "0",
-
-                                                                    top:
-                                                                        "30px",
-
-                                                                    zIndex:
-                                                                        50,
-
-                                                                    width:
-                                                                        "190px",
-
-                                                                    padding:
-                                                                        "6px",
-
-                                                                    border:
-                                                                        "1px solid rgba(255,255,255,0.15)",
-
-                                                                    borderRadius:
-                                                                        "8px",
-
-                                                                    background:
-                                                                        "#151d27"
-                                                                }}
-                                                            >
-
-                                                                {isMyMessage &&
-                                                                    message.messageType ===
-                                                                        "text" &&
-                                                                    !message.isDeletedForEveryone && (
-
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() =>
-                                                                            handleStartEdit(
+                                                                    <div
+                                                                        className="
+                                                                            !flex
+                                                                            !h-full
+                                                                            !w-full
+                                                                            !items-center
+                                                                            !justify-center
+                                                                            !font-bold
+                                                                            !text-emerald-300
+                                                                        "
+                                                                    >
+                                                                        {
+                                                                            getAvatarLetter(
                                                                                 message
                                                                             )
                                                                         }
-                                                                        style={{
-                                                                            width:
-                                                                                "100%",
-                                                                            padding:
-                                                                                "10px",
-                                                                            border:
-                                                                                "none",
-                                                                            background:
-                                                                                "transparent",
-                                                                            color:
-                                                                                "white",
-                                                                            textAlign:
-                                                                                "left",
-                                                                            cursor:
-                                                                                "pointer"
-                                                                        }}
-                                                                    >
-                                                                        ✏️ Edit
-                                                                    </button>
-
-                                                                )}
-
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={
-                                                                        () =>
-                                                                            handleDeleteForMe(
-                                                                                message._id
-                                                                            )
-                                                                    }
-                                                                    style={{
-                                                                        width:
-                                                                            "100%",
-
-                                                                        padding:
-                                                                            "10px",
-
-                                                                        border:
-                                                                            "none",
-
-                                                                        background:
-                                                                            "transparent",
-
-                                                                        color:
-                                                                            "white",
-
-                                                                        textAlign:
-                                                                            "left",
-
-                                                                        cursor:
-                                                                            "pointer"
-                                                                    }}
-                                                                >
-                                                                    🗑 Delete for me
-                                                                </button>
-
-
-                                                                {isMyMessage && (
-
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={
-                                                                            () =>
-                                                                                handleDeleteForEveryone(
-                                                                                    message._id
-                                                                                )
-                                                                        }
-                                                                        style={{
-                                                                            width:
-                                                                                "100%",
-
-                                                                            padding:
-                                                                                "10px",
-
-                                                                            border:
-                                                                                "none",
-
-                                                                            background:
-                                                                                "transparent",
-
-                                                                            color:
-                                                                                "#ef4444",
-
-                                                                            textAlign:
-                                                                                "left",
-
-                                                                            cursor:
-                                                                                "pointer"
-                                                                        }}
-                                                                    >
-                                                                        🗑 Delete for everyone
-                                                                    </button>
+                                                                    </div>
 
                                                                 )}
 
@@ -2770,118 +2807,312 @@ const handleSaveEdit = async(
 
                                                         )}
 
+
+                                                        <div
+                                                            className="
+                                                                !min-w-0
+                                                            "
+                                                        >
+
+                                                            <p
+                                                                className={`
+                                                                    !m-0
+                                                                    !truncate
+                                                                    !text-sm
+                                                                    !font-bold
+                                                                    ${
+                                                                        isMyMessage
+                                                                            ? "!text-emerald-400"
+                                                                            : "!text-white"
+                                                                    }
+                                                                `}
+                                                            >
+                                                                {
+                                                                    senderName
+                                                                }
+                                                            </p>
+
+
+                                                            <p
+                                                                className="
+                                                                    !mt-0.5
+                                                                    !mb-0
+                                                                    !text-[10px]
+                                                                    !text-slate-600
+                                                                "
+                                                            >
+                                                                {
+                                                                    formatTime(
+                                                                        message.createdAt
+                                                                    )
+                                                                }
+                                                            </p>
+
+                                                        </div>
+
+                                                    </div>
+
+
+                                                    {!message.isDeletedForEveryone && (
+
+                                                        <div
+                                                            className="
+                                                                !relative
+                                                            "
+                                                        >
+
+                                                            <button
+                                                                type="button"
+                                                                onClick={() =>
+                                                                    setOpenMenuId(
+                                                                        openMenuId ===
+                                                                            message._id
+                                                                            ? null
+                                                                            : message._id
+                                                                    )
+                                                                }
+                                                                className="
+                                                                    !flex
+                                                                    !h-8
+                                                                    !w-8
+                                                                    !items-center
+                                                                    !justify-center
+                                                                    !rounded-lg
+                                                                    !text-slate-500
+                                                                    !transition
+                                                                    hover:!bg-white/5
+                                                                    hover:!text-white
+                                                                "
+                                                            >
+                                                                ⋮
+                                                            </button>
+
+
+                                                            {openMenuId ===
+                                                                message._id && (
+
+                                                                <div
+                                                                    className="
+                                                                        !absolute
+                                                                        !right-0
+                                                                        !top-9
+                                                                        !z-50
+                                                                        !w-48
+                                                                        !overflow-hidden
+                                                                        !rounded-xl
+                                                                        !border
+                                                                        !border-white/10
+                                                                        !bg-[#101820]
+                                                                        !shadow-2xl
+                                                                    "
+                                                                >
+
+                                                                    {isMyMessage &&
+                                                                    message.messageType ===
+                                                                        "text" &&
+                                                                    !message.isDeletedForEveryone && (
+
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() =>
+                                                                                handleStartEdit(
+                                                                                    message
+                                                                                )
+                                                                            }
+                                                                            className="
+                                                                                !flex
+                                                                                !w-full
+                                                                                !px-4
+                                                                                !py-3
+                                                                                !text-left
+                                                                                !text-sm
+                                                                                !text-slate-200
+                                                                                !transition
+                                                                                hover:!bg-white/5
+                                                                            "
+                                                                        >
+                                                                            ✏️ Edit
+                                                                        </button>
+
+                                                                    )}
+
+
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() =>
+                                                                            handleDeleteForMe(
+                                                                                message._id
+                                                                            )
+                                                                        }
+                                                                        className="
+                                                                            !flex
+                                                                            !w-full
+                                                                            !px-4
+                                                                            !py-3
+                                                                            !text-left
+                                                                            !text-sm
+                                                                            !text-slate-200
+                                                                            !transition
+                                                                            hover:!bg-white/5
+                                                                        "
+                                                                    >
+                                                                        🗑 Delete for me
+                                                                    </button>
+
+
+                                                                    {isMyMessage && (
+
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() =>
+                                                                                handleDeleteForEveryone(
+                                                                                    message._id
+                                                                                )
+                                                                            }
+                                                                            className="
+                                                                                !flex
+                                                                                !w-full
+                                                                                !px-4
+                                                                                !py-3
+                                                                                !text-left
+                                                                                !text-sm
+                                                                                !text-red-300
+                                                                                !transition
+                                                                                hover:!bg-red-400/5
+                                                                            "
+                                                                        >
+                                                                            🗑 Delete for everyone
+                                                                        </button>
+
+                                                                    )}
+
+                                                                </div>
+
+                                                            )}
+
+                                                        </div>
+
+                                                    )}
+
+                                                </div>
+
+
+                                                {/* DELETED */}
+
+                                                {message.isDeletedForEveryone && (
+
+                                                    <div
+                                                        className="
+                                                            !mt-3
+                                                            !rounded-xl
+                                                            !border
+                                                            !border-white/5
+                                                            !bg-black/10
+                                                            !px-3
+                                                            !py-2
+                                                        "
+                                                    >
+
+                                                        <p
+                                                            className="
+                                                                !m-0
+                                                                !text-sm
+                                                                !italic
+                                                                !text-slate-500
+                                                            "
+                                                        >
+                                                            🚫 This message was deleted
+                                                        </p>
+
                                                     </div>
 
                                                 )}
 
-                                            </div>
 
+                                                {/* TEXT */}
 
-                                            {/* DELETED */}
-
-                                            {message.isDeletedForEveryone && (
-
-                                                <p
-                                                    style={{
-                                                        opacity:
-                                                            "0.55",
-
-                                                        fontStyle:
-                                                            "italic"
-                                                    }}
-                                                >
-                                                    🚫 This message was deleted
-                                                </p>
-
-                                            )}
-
-
-                                            {/* TEXT / EDIT */}
-
-                                            {!message.isDeletedForEveryone &&
-
+                                                {!message.isDeletedForEveryone &&
                                                 message.messageType ===
-                                                "text" && (
+                                                    "text" && (
 
                                                     editingMessageId ===
                                                     message._id ? (
 
-                                                        <div>
+                                                        <div
+                                                            className="
+                                                                !mt-3
+                                                                !min-w-[240px]
+                                                                sm:!min-w-[320px]
+                                                            "
+                                                        >
 
                                                             <input
                                                                 type="text"
                                                                 value={
                                                                     editingText
                                                                 }
-                                                                onChange={
-                                                                    (event) =>
-                                                                        setEditingText(
-                                                                            event.target.value
-                                                                        )
+                                                                onChange={(
+                                                                    event
+                                                                ) =>
+                                                                    setEditingText(
+                                                                        event.target.value
+                                                                    )
                                                                 }
                                                                 autoFocus
                                                                 disabled={
                                                                     sending
                                                                 }
-                                                                onKeyDown={
-                                                                    (event) => {
+                                                                onKeyDown={(
+                                                                    event
+                                                                ) => {
 
-                                                                        if (
-                                                                            event.key ===
+                                                                    if (
+                                                                        event.key ===
                                                                             "Enter" &&
-                                                                            !event.shiftKey
-                                                                        ) {
+                                                                        !event.shiftKey
+                                                                    ) {
 
-                                                                            event.preventDefault();
+                                                                        event.preventDefault();
 
-                                                                            handleSaveEdit(
-                                                                                message
-                                                                            );
-
-                                                                        }
-
-                                                                        if (
-                                                                            event.key ===
-                                                                            "Escape"
-                                                                        ) {
-
-                                                                            handleCancelEdit();
-
-                                                                        }
+                                                                        handleSaveEdit(
+                                                                            message
+                                                                        );
 
                                                                     }
-                                                                }
-                                                                style={{
-                                                                    width:
-                                                                        "100%",
-                                                                    minWidth:
-                                                                        "220px",
-                                                                    padding:
-                                                                        "10px 12px",
-                                                                    border:
-                                                                        "1px solid #22c55e",
-                                                                    borderRadius:
-                                                                        "8px",
-                                                                    outline:
-                                                                        "none",
-                                                                    background:
-                                                                        "rgba(255,255,255,0.05)",
-                                                                    color:
-                                                                        "inherit",
-                                                                    fontSize:
-                                                                        "14px"
+
+
+                                                                    if (
+                                                                        event.key ===
+                                                                        "Escape"
+                                                                    ) {
+
+                                                                        handleCancelEdit();
+
+                                                                    }
+
                                                                 }}
+                                                                className="
+                                                                    !h-11
+                                                                    !w-full
+                                                                    !rounded-xl
+                                                                    !border
+                                                                    !border-emerald-400/30
+                                                                    !bg-black/20
+                                                                    !px-3
+                                                                    !text-sm
+                                                                    !text-white
+                                                                    !outline-none
+                                                                    focus:!border-emerald-400
+                                                                "
                                                             />
 
+
                                                             <div
-                                                                style={{
-                                                                    display:
-                                                                        "flex",
-                                                                    gap:
-                                                                        "8px",
-                                                                    marginTop:
-                                                                        "8px"
-                                                                }}
+                                                                className="
+                                                                    !mt-2
+                                                                    !flex
+                                                                    !gap-2
+                                                                "
                                                             >
 
                                                                 <button
@@ -2895,30 +3126,22 @@ const handleSaveEdit = async(
                                                                         sending ||
                                                                         !editingText.trim()
                                                                     }
-                                                                    style={{
-                                                                        padding:
-                                                                            "7px 12px",
-                                                                        border:
-                                                                            "1px solid #22c55e",
-                                                                        borderRadius:
-                                                                            "6px",
-                                                                        background:
-                                                                            "#22c55e",
-                                                                        color:
-                                                                            "#fff",
-                                                                        cursor:
-                                                                            "pointer",
-                                                                        opacity:
-                                                                            sending ||
-                                                                            !editingText.trim()
-                                                                                ? 0.5
-                                                                                : 1
-                                                                    }}
+                                                                    className="
+                                                                        !rounded-lg
+                                                                        !bg-emerald-400
+                                                                        !px-3
+                                                                        !py-2
+                                                                        !text-xs
+                                                                        !font-bold
+                                                                        !text-black
+                                                                        disabled:!opacity-50
+                                                                    "
                                                                 >
                                                                     {sending
                                                                         ? "Saving..."
                                                                         : "Save"}
                                                                 </button>
+
 
                                                                 <button
                                                                     type="button"
@@ -2928,20 +3151,16 @@ const handleSaveEdit = async(
                                                                     disabled={
                                                                         sending
                                                                     }
-                                                                    style={{
-                                                                        padding:
-                                                                            "7px 12px",
-                                                                        border:
-                                                                            "1px solid rgba(255,255,255,0.18)",
-                                                                        borderRadius:
-                                                                            "6px",
-                                                                        background:
-                                                                            "transparent",
-                                                                        color:
-                                                                            "inherit",
-                                                                        cursor:
-                                                                            "pointer"
-                                                                    }}
+                                                                    className="
+                                                                        !rounded-lg
+                                                                        !border
+                                                                        !border-white/10
+                                                                        !px-3
+                                                                        !py-2
+                                                                        !text-xs
+                                                                        !font-bold
+                                                                        !text-slate-300
+                                                                    "
                                                                 >
                                                                     Cancel
                                                                 </button>
@@ -2952,64 +3171,94 @@ const handleSaveEdit = async(
 
                                                     ) : (
 
-                                                        <p>
+                                                        <div
+                                                            className="
+                                                                !mt-3
+                                                            "
+                                                        >
 
-                                                            {
-                                                                message.decryptedContent ||
+                                                            <p
+                                                                className="
+                                                                    !m-0
+                                                                    !whitespace-pre-wrap
+                                                                    !break-words
+                                                                    !text-sm
+                                                                    !leading-6
+                                                                    !text-slate-200
+                                                                "
+                                                            >
+                                                                {
+                                                                    message.decryptedContent ||
+                                                                    message.content ||
+                                                                    "🔒 Encrypted message"
+                                                                }
 
-                                                                message.content ||
 
-                                                                "🔒 Encrypted message"
-                                                            }
+                                                                {message.isEdited && (
 
-                                                            {message.isEdited && (
+                                                                    <span
+                                                                        className="
+                                                                            !ml-2
+                                                                            !text-[10px]
+                                                                            !text-slate-600
+                                                                        "
+                                                                    >
+                                                                        edited
+                                                                    </span>
 
-                                                                <small
-                                                                    style={{
-                                                                        marginLeft:
-                                                                            "8px",
-                                                                        opacity:
-                                                                            "0.5"
-                                                                    }}
-                                                                >
-                                                                    edited
-                                                                </small>
+                                                                )}
 
-                                                            )}
+                                                            </p>
 
-                                                        </p>
+                                                        </div>
 
                                                     )
 
                                                 )}
 
 
-                                            {/* IMAGE */}
+                                                {/* IMAGE */}
 
-                                            {!message.isDeletedForEveryone &&
-
+                                                {!message.isDeletedForEveryone &&
                                                 message.messageType ===
-                                                "image" && (
+                                                    "image" && (
 
-                                                    <img
-                                                        src={
-                                                            message.fileUrl
-                                                        }
-                                                        alt={
-                                                            message.fileName ||
-                                                            "Shared image"
-                                                        }
-                                                    />
+                                                    <div
+                                                        className="
+                                                            !mt-3
+                                                            !overflow-hidden
+                                                            !rounded-xl
+                                                            !border
+                                                            !border-white/10
+                                                        "
+                                                    >
+
+                                                        <img
+                                                            src={
+                                                                message.fileUrl
+                                                            }
+                                                            alt={
+                                                                message.fileName ||
+                                                                "Shared image"
+                                                            }
+                                                            className="
+                                                                !block
+                                                                !max-h-[420px]
+                                                                !max-w-full
+                                                                !object-contain
+                                                            "
+                                                        />
+
+                                                    </div>
 
                                                 )}
 
 
-                                            {/* FILE */}
+                                                {/* FILE */}
 
-                                            {!message.isDeletedForEveryone &&
-
+                                                {!message.isDeletedForEveryone &&
                                                 message.messageType ===
-                                                "file" && (
+                                                    "file" && (
 
                                                     <a
                                                         href={
@@ -3017,149 +3266,241 @@ const handleSaveEdit = async(
                                                         }
                                                         target="_blank"
                                                         rel="noreferrer"
+                                                        className="
+                                                            !mt-3
+                                                            !flex
+                                                            !items-center
+                                                            !gap-3
+                                                            !rounded-xl
+                                                            !border
+                                                            !border-white/10
+                                                            !bg-white/[0.03]
+                                                            !px-4
+                                                            !py-3
+                                                            !text-sm
+                                                            !font-semibold
+                                                            !text-slate-200
+                                                            !no-underline
+                                                            !transition
+                                                            hover:!border-emerald-400/20
+                                                            hover:!text-emerald-300
+                                                        "
                                                     >
-                                                        📎{" "}
+                                                        <span>
+                                                            📎
+                                                        </span>
 
-                                                        {
-                                                            message.fileName ||
-                                                            "Download file"
-                                                        }
+                                                        <span
+                                                            className="
+                                                                !truncate
+                                                            "
+                                                        >
+                                                            {
+                                                                message.fileName ||
+                                                                "Download file"
+                                                            }
+                                                        </span>
 
                                                     </a>
 
                                                 )}
 
+                                            </article>
+
                                         </div>
 
-                                    </div>
+                                    );
 
-                                );
-
-                            }
-
-                        )}
+                                }
+                            )}
 
 
-                    <div
-                        ref={
-                            messagesEndRef
-                        }
-                    />
+                            <div
+                                ref={
+                                    messagesEndRef
+                                }
+                            />
+
+                        </div>
+
+                    )}
 
                 </div>
 
 
-                {/* MESSAGE FORM */}
+                {/* ======================================
+                    MESSAGE COMPOSER
+                ====================================== */}
 
-                <form
-                    onSubmit={
-                        handleSendMessage
-                    }
-                    className="chat-page__form"
+                <div
+                    className="
+                        !shrink-0
+                        !border-t
+                        !border-white/10
+                        !bg-[#080d12]/95
+                        !px-3
+                        !py-3
+                        !backdrop-blur-xl
+                        sm:!px-6
+                        sm:!py-4
+                        lg:!px-8
+                    "
                 >
 
-                    <input
-                        ref={
-                            fileInputRef
+                    <form
+                        onSubmit={
+                            handleSendMessage
                         }
-                        type="file"
-                        hidden
-                        onChange={
-                            handleFileUpload
-                        }
-                    />
-
-
-                    <button
-                        type="button"
-                        className="chat-page__file-button"
-                        onClick={
-                            handleFileButtonClick
-                        }
-                        disabled={
-                            uploading ||
-                            sending
-                        }
-                        title="Upload file"
+                        className="
+                            !mx-auto
+                            !flex
+                            !w-full
+                            !max-w-5xl
+                            !items-center
+                            !gap-2
+                        "
                     >
-                        {uploading
-                            ?
 
-                            "..."
+                        <input
+                            ref={
+                                fileInputRef
+                            }
+                            type="file"
+                            hidden
+                            onChange={
+                                handleFileUpload
+                            }
+                        />
 
-                            :
 
-                            "📎"}
-                    </button>
+                        {/* FILE BUTTON */}
+
+                        <button
+                            type="button"
+                            onClick={
+                                handleFileButtonClick
+                            }
+                            disabled={
+                                uploading ||
+                                sending
+                            }
+                            title="Upload file"
+                            className="
+                                !flex
+                                !h-12
+                                !w-12
+                                !shrink-0
+                                !items-center
+                                !justify-center
+                                !rounded-xl
+                                !border
+                                !border-white/10
+                                !bg-white/[0.03]
+                                !text-lg
+                                !text-slate-400
+                                !transition
+                                hover:!border-emerald-400/30
+                                hover:!bg-emerald-400/5
+                                hover:!text-emerald-300
+                                disabled:!opacity-50
+                            "
+                        >
+                            {uploading
+                                ? "..."
+                                : "📎"}
+                        </button>
 
 
-                    <input
-                        type="text"
+                        {/* MESSAGE INPUT */}
 
-                        placeholder={
-                            socketStatus ===
-                            "connected"
-
-                                ?
-
-                                "Type an encrypted message..."
-
-                                :
-
-                                "Chat is connecting..."
-                        }
-
-                        value={
-                            messageText
-                        }
-
-                        onChange={
-                            (event) =>
-
+                        <input
+                            type="text"
+                            value={
+                                messageText
+                            }
+                            onChange={(
+                                event
+                            ) =>
                                 setMessageText(
                                     event.target.value
                                 )
-                        }
+                            }
+                            placeholder={
+                                socketStatus ===
+                                "connected"
+                                    ? "Write an encrypted message..."
+                                    : "Chat is connecting..."
+                            }
+                            disabled={
+                                sending ||
+                                uploading ||
+                                socketStatus !==
+                                    "connected"
+                            }
+                            className="
+                                !h-12
+                                !min-w-0
+                                !flex-1
+                                !rounded-xl
+                                !border
+                                !border-white/10
+                                !bg-[#10171f]
+                                !px-4
+                                !text-sm
+                                !text-white
+                                !outline-none
+                                placeholder:!text-slate-600
+                                focus:!border-emerald-400/30
+                                focus:!ring-2
+                                focus:!ring-emerald-400/10
+                            "
+                        />
 
-                        disabled={
-                            sending ||
-                            uploading
-                        }
-                    />
 
+                        {/* SEND */}
 
-                    <button
-                        type="submit"
+                        <button
+                            type="submit"
+                            disabled={
+                                sending ||
+                                uploading ||
+                                !messageText.trim() ||
+                                socketStatus !==
+                                    "connected"
+                            }
+                            className="
+                                !hidden
+                                !h-12
+                                !shrink-0
+                                !rounded-xl
+                                !bg-emerald-400
+                                !px-5
+                                !text-sm
+                                !font-black
+                                !text-black
+                                !transition
+                                hover:!bg-emerald-300
+                                disabled:!cursor-not-allowed
+                                disabled:!opacity-40
+                                sm:!block
+                            "
+                        >
+                            {sending
+                                ? "Sending..."
+                                : "Send"}
+                        </button>
 
-                        disabled={
-                            sending ||
-                            uploading ||
-                            !messageText.trim() ||
-                            socketStatus !==
-                            "connected"
-                        }
-                    >
+                    </form>
 
-                        {sending
-
-                            ?
-
-                            "Sending..."
-
-                            :
-
-                            "Send"}
-
-                    </button>
-
-                </form>
+                </div>
 
             </div>
 
         </section>
 
-    );
+    </main>
 
+);
 };
 
 
