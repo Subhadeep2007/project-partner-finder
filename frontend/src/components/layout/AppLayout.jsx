@@ -4,11 +4,33 @@ import {
     useNavigate
 } from "react-router-dom";
 
+import {
+    useEffect,
+    useState
+} from "react";
+
+import Navbar from "../common/Navbar";
+
+import {
+    getMyProjects
+} from "../../services/project.service";
+
 
 const AppLayout = () => {
 
     const navigate =
         useNavigate();
+
+
+    // ==========================================
+    // MY PROJECTS
+    // ==========================================
+
+    const [myProjects, setMyProjects] =
+        useState([]);
+
+    const [projectsLoading, setProjectsLoading] =
+        useState(true);
 
 
     // ==========================================
@@ -20,6 +42,7 @@ const AppLayout = () => {
         localStorage.removeItem(
             "accessToken"
         );
+
 
         localStorage.removeItem(
             "user"
@@ -37,7 +60,77 @@ const AppLayout = () => {
 
 
     // ==========================================
-    // NAV LINK CLASS
+    // LOAD MY PROJECTS
+    // OWNER + MEMBER
+    // ==========================================
+
+    useEffect(() => {
+
+        let isMounted = true;
+
+
+        const fetchMyProjects =
+            async() => {
+
+                try {
+
+                    setProjectsLoading(true);
+
+
+                    const response =
+                        await getMyProjects();
+
+
+                    if (!isMounted) {
+                        return;
+                    }
+
+
+                    setMyProjects(
+                        response.data || []
+                    );
+
+                } catch (error) {
+
+                    console.error(
+                        "Failed to load sidebar projects:",
+                        error
+                    );
+
+
+                    if (isMounted) {
+
+                        setMyProjects([]);
+
+                    }
+
+                } finally {
+
+                    if (isMounted) {
+
+                        setProjectsLoading(false);
+
+                    }
+
+                }
+
+            };
+
+
+        fetchMyProjects();
+
+
+        return () => {
+
+            isMounted = false;
+
+        };
+
+    }, []);
+
+
+    // ==========================================
+    // MAIN NAV LINK CLASS
     // ==========================================
 
     const mainNavClass = ({
@@ -61,6 +154,10 @@ const AppLayout = () => {
 
     };
 
+
+    // ==========================================
+    // WORKSPACE NAV LINK CLASS
+    // ==========================================
 
     const workspaceNavClass = ({
         isActive
@@ -151,7 +248,7 @@ const AppLayout = () => {
                                 !text-slate-500
                             "
                         >
-                            PROJECT
+                            PROJECT_PARTNER
                         </p>
 
 
@@ -179,6 +276,7 @@ const AppLayout = () => {
                 <nav
                     className="
                         !flex-1
+                        !overflow-y-auto
                         !p-4
                     "
                 >
@@ -311,7 +409,11 @@ const AppLayout = () => {
                         WORKSPACE
                     ================================== */}
 
-                    <div>
+                    <div
+                        className="
+                            !mb-7
+                        "
+                    >
 
                         <p
                             className="
@@ -506,6 +608,199 @@ const AppLayout = () => {
 
                     </div>
 
+
+                    {/* ==================================
+                        MY PROJECTS
+                    ================================== */}
+
+                    <div>
+
+                        <div
+                            className="
+                                !mb-3
+                                !flex
+                                !items-center
+                                !justify-between
+                                !px-3
+                            "
+                        >
+
+                            <p
+                                className="
+                                    !m-0
+                                    !font-mono
+                                    !text-[10px]
+                                    !font-bold
+                                    !uppercase
+                                    !tracking-[0.2em]
+                                    !text-slate-600
+                                "
+                            >
+                                My Projects
+                            </p>
+
+
+                            {myProjects.length > 0 && (
+
+                                <span
+                                    className="
+                                        !rounded-full
+                                        !bg-white/[0.04]
+                                        !px-2
+                                        !py-0.5
+                                        !text-[9px]
+                                        !font-bold
+                                        !text-slate-500
+                                    "
+                                >
+                                    {myProjects.length}
+                                </span>
+
+                            )}
+
+                        </div>
+
+
+                        {projectsLoading ? (
+
+                            <div
+                                className="
+                                    !rounded-xl
+                                    !border
+                                    !border-white/5
+                                    !bg-white/[0.02]
+                                    !px-3
+                                    !py-3
+                                    !text-xs
+                                    !text-slate-600
+                                "
+                            >
+                                Loading projects...
+                            </div>
+
+                        ) : myProjects.length === 0 ? (
+
+                            <div
+                                className="
+                                    !rounded-xl
+                                    !border
+                                    !border-dashed
+                                    !border-white/10
+                                    !px-3
+                                    !py-4
+                                    !text-xs
+                                    !leading-5
+                                    !text-slate-600
+                                "
+                            >
+                                No joined projects yet.
+                            </div>
+
+                        ) : (
+
+                            <div
+                                className="
+                                    !space-y-1.5
+                                "
+                            >
+
+                                {myProjects.map(
+                                    (project) => (
+
+                                        <NavLink
+                                            key={
+                                                project._id
+                                            }
+                                            to={
+                                                `/projects/${project._id}`
+                                            }
+                                            className={({
+                                                isActive
+                                            }) => `
+                                                !flex
+                                                !items-center
+                                                !gap-3
+                                                !rounded-xl
+                                                !border
+                                                !px-3
+                                                !py-2.5
+                                                !transition
+                                                ${
+                                                    isActive
+                                                        ? "!border-emerald-400/20 !bg-emerald-400/[0.07] !text-emerald-300"
+                                                        : "!border-transparent !text-slate-400 hover:!border-white/5 hover:!bg-white/[0.03] hover:!text-slate-200"
+                                                }
+                                            `}
+                                        >
+
+                                            <span
+                                                className="
+                                                    !flex
+                                                    !h-7
+                                                    !w-7
+                                                    !shrink-0
+                                                    !items-center
+                                                    !justify-center
+                                                    !rounded-lg
+                                                    !border
+                                                    !border-white/10
+                                                    !bg-white/[0.03]
+                                                    !font-mono
+                                                    !text-[10px]
+                                                    !font-bold
+                                                    !text-emerald-300
+                                                "
+                                            >
+                                                #
+                                            </span>
+
+
+                                            <span
+                                                className="
+                                                    !min-w-0
+                                                "
+                                            >
+
+                                                <span
+                                                    className="
+                                                        !block
+                                                        !truncate
+                                                        !text-xs
+                                                        !font-semibold
+                                                    "
+                                                >
+                                                    {
+                                                        project.title
+                                                    }
+                                                </span>
+
+
+                                                <span
+                                                    className="
+                                                        !mt-0.5
+                                                        !block
+                                                        !text-[9px]
+                                                        !uppercase
+                                                        !tracking-wider
+                                                        !text-slate-600
+                                                    "
+                                                >
+                                                    Project
+                                                </span>
+
+                                            </span>
+
+                                        </NavLink>
+
+                                    )
+                                )}
+
+                            </div>
+
+                        )}
+
+                    </div>
+
                 </nav>
 
 
@@ -556,6 +851,7 @@ const AppLayout = () => {
                             ⇥
                         </span>
 
+
                         <span>
                             Logout
                         </span>
@@ -568,19 +864,31 @@ const AppLayout = () => {
 
 
             {/* ==========================================
-                MAIN CONTENT
+                MAIN SHELL
             ========================================== */}
 
-            <main
+            <div
                 className="
                     !min-w-0
                     !flex-1
                 "
             >
 
-                <Outlet />
+                <Navbar />
 
-            </main>
+
+                <main
+                    className="
+                        !min-w-0
+                        !flex-1
+                    "
+                >
+
+                    <Outlet />
+
+                </main>
+
+            </div>
 
         </div>
 

@@ -292,7 +292,154 @@ const initializeSocket = (server) => {
 
             }
         );
+        // ==========================================
+        // MESSAGE REKEY COMPLETED
+        // ==========================================
 
+        socket.on(
+            "message_rekey_completed",
+            async({
+                    projectId,
+                    targetUserId
+                },
+                callback
+            ) => {
+
+                try {
+
+                    if (!projectId ||
+                        !targetUserId
+                    ) {
+
+                        throw new Error(
+                            "Project ID and target user ID are required"
+                        );
+
+                    }
+
+
+                    const project =
+                        await Project.findById(
+                            projectId
+                        );
+
+
+                    if (!project) {
+
+                        throw new Error(
+                            "Project not found"
+                        );
+
+                    }
+
+
+                    // ==========================================
+                    // REQUESTER ACCESS CHECK
+                    // ==========================================
+
+                    const isOwner =
+                        project.owner.toString() ===
+                        userId;
+
+
+                    const isMember =
+                        project.members.some(
+                            (memberId) =>
+                            memberId.toString() ===
+                            userId
+                        );
+
+
+                    if (!isOwner &&
+                        !isMember
+                    ) {
+
+                        throw new Error(
+                            "You are not authorized to update message keys"
+                        );
+
+                    }
+
+
+                    // ==========================================
+                    // TARGET USER MUST BE PROJECT PARTICIPANT
+                    // ==========================================
+
+                    const targetIsOwner =
+                        project.owner.toString() ===
+                        targetUserId;
+
+
+                    const targetIsMember =
+                        project.members.some(
+                            (memberId) =>
+                            memberId.toString() ===
+                            targetUserId
+                        );
+
+
+                    if (!targetIsOwner &&
+                        !targetIsMember
+                    ) {
+
+                        throw new Error(
+                            "Target user is not a project participant"
+                        );
+
+                    }
+
+
+                    // ==========================================
+                    // BROADCAST COMPLETION
+                    // ==========================================
+
+                    io.to(
+                        `project:${projectId}`
+                    ).emit(
+                        "message_rekey_completed", {
+                            projectId,
+                            targetUserId,
+                            completedBy: userId
+                        }
+                    );
+
+
+                    if (
+                        typeof callback ===
+                        "function"
+                    ) {
+
+                        return callback({
+
+                            success: true,
+
+                            message: "Message re-key completion broadcast successfully"
+
+                        });
+
+                    }
+
+                } catch (error) {
+
+                    if (
+                        typeof callback ===
+                        "function"
+                    ) {
+
+                        return callback({
+
+                            success: false,
+
+                            message: error.message
+
+                        });
+
+                    }
+
+                }
+
+            }
+        );
 
         // ==========================================
         // TYPING START

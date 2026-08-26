@@ -909,6 +909,91 @@ const decryptSingleMessage = async(
     };
 
 
+    // ==========================================
+    // LOAD ALL HISTORICAL MESSAGES FOR RE-KEY
+    // ==========================================
+
+    const getAllMessagesForRekey = async(
+        targetProjectId
+    ) => {
+
+        const allMessages = [];
+        let page = 1;
+        let totalPages = 1;
+        const limit = 100;
+
+        do {
+
+            const response =
+                await getProjectMessages(
+                    targetProjectId,
+                    page,
+                    limit
+                );
+
+            const pageMessages =
+                Array.isArray(response?.data)
+                    ? response.data
+                    : [];
+
+            allMessages.push(...pageMessages);
+
+            totalPages = Number(
+                response?.pagination?.totalPages || 1
+            );
+
+            page += 1;
+
+        } while (page <= totalPages);
+
+        return allMessages;
+    };
+
+
+    const refreshMessagesAfterRekey = async() => {
+
+        if (!projectId || !currentUserId) {
+            return;
+        }
+
+        await new Promise((resolve) =>
+            setTimeout(resolve, 400)
+        );
+
+        try {
+
+            const response =
+                await getProjectMessages(projectId);
+
+            const latestMessages =
+                Array.isArray(response?.data)
+                    ? response.data
+                    : [];
+
+            const decryptedMessages =
+                await decryptAllMessages(
+                    latestMessages,
+                    currentUserId
+                );
+
+            setMessages(decryptedMessages);
+
+            console.log(
+                "Messages refreshed after E2EE re-key"
+            );
+
+        } catch (error) {
+
+            console.error(
+                "Failed to refresh messages after E2EE re-key:",
+                error
+            );
+
+        }
+
+    };
+
+
     // SOCKET
     // ==========================================
 
@@ -931,7 +1016,7 @@ const decryptSingleMessage = async(
         connectSocket();
 
 
-        const joinProject = () => {
+        const joinProject = async() => {
 
     setSocketStatus(
         "connected"
@@ -940,7 +1025,7 @@ const decryptSingleMessage = async(
     socket.emit(
         "join_project_chat",
         projectId,
-        (response) => {
+        async(response) => {
 
             if (
                 !response ||
@@ -969,14 +1054,29 @@ const decryptSingleMessage = async(
         // project member to re-key old messages.
         if (currentUserId) {
 
-            socket.emit(
-                "request_message_rekey",
-                {
-                    projectId,
-                    targetUserId:
-                        currentUserId
-                }
-            );
+            try {
+
+                await syncCurrentUserE2EEKey(
+                    currentUserId
+                );
+
+                socket.emit(
+                    "request_message_rekey",
+                    {
+                        projectId,
+                        targetUserId:
+                            currentUserId
+                    }
+                );
+
+            } catch (e2eeError) {
+
+                console.error(
+                    "Failed to sync E2EE key before re-key request:",
+                    e2eeError
+                );
+
+            }
 
         }
         }
@@ -1346,8 +1446,13 @@ const handleMessageRekeyRequest =
             }
 
 
+            const allMessages =
+                await getAllMessagesForRekey(
+                    projectId
+                );
+
             for (
-                const message of messagesRef.current
+                const message of allMessages
             ) {
 
                 if (
@@ -1422,6 +1527,14 @@ const handleMessageRekeyRequest =
             console.log(
                 "Re-key completed for:",
                 targetUserId
+            );
+
+            socket.emit(
+                "message_rekey_completed",
+                {
+                    projectId,
+                    targetUserId
+                }
             );
 
         } catch (error) {
@@ -1651,8 +1764,13 @@ const handleMemberJoined =
             // encryptedContent, iv and encryptedKeys.
             // So yahin se old encrypted AES keys
             // ko re-wrap karenge.
+            const allMessages =
+                await getAllMessagesForRekey(
+                    projectId
+                );
+
             for (
-                const message of messagesRef.current
+                const message of allMessages
             ) {
 
                 try {
@@ -1763,6 +1881,14 @@ const handleMemberJoined =
                 memberId
             );
 
+            socket.emit(
+                "message_rekey_completed",
+                {
+                    projectId,
+                    targetUserId: memberId
+                }
+            );
+
 
         } catch (error) {
 
@@ -1784,6 +1910,40 @@ const handleMemberJoined =
         "member_joined",
         handleMemberJoined
     );
+        const handleMessageRekeyCompleted = async({
+            projectId: rekeyProjectId,
+            targetUserId
+        }) => {
+
+            if (
+                String(rekeyProjectId) !==
+                String(projectId)
+            ) {
+                return;
+            }
+
+            if (
+                !currentUserId ||
+                String(targetUserId) !==
+                String(currentUserId)
+            ) {
+                return;
+            }
+
+            console.log(
+                "E2EE re-key completed for current user:",
+                targetUserId
+            );
+
+            await refreshMessagesAfterRekey();
+
+        };
+
+        socket.on(
+            "message_rekey_completed",
+            handleMessageRekeyCompleted
+        );
+
         socket.on(
             "receive_message",
             handleReceiveMessage
@@ -1884,6 +2044,11 @@ const handleMemberJoined =
             socket.off(
                 "member_joined",
                 handleMemberJoined
+            );
+
+            socket.off(
+                "message_rekey_completed",
+                handleMessageRekeyCompleted
             );
 
             socket.off(

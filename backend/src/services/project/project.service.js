@@ -39,14 +39,26 @@ const createProject = async(
 
 
 const getMyProjects = async(userId) => {
-    const projects = await Project.find({
-            owner: userId
+
+    const projects =
+        await Project.find({
+
+            $or: [{
+                    owner: userId
+                },
+                {
+                    members: userId
+                }
+            ]
+
         })
-        .sort({ createdAt: -1 });
+        .sort({
+            createdAt: -1
+        });
 
     return projects;
-};
 
+};
 const getProjectById = async(projectId) => {
 
     const project =
