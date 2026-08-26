@@ -356,11 +356,13 @@ const getIncomingJoinRequests = async(
     userId
 ) => {
 
+    // ==========================================
+    // FIND OWNER PROJECTS
+    // ==========================================
+
     const projects =
         await Project.find({
-
             owner: userId
-
         }).select(
             "_id"
         );
@@ -373,6 +375,10 @@ const getIncomingJoinRequests = async(
         );
 
 
+    // ==========================================
+    // ONLY PENDING REQUESTS
+    // ==========================================
+
     const requests =
         await JoinRequest.find({
 
@@ -384,14 +390,38 @@ const getIncomingJoinRequests = async(
 
         })
 
+    // ==========================================
+    // PROJECT DETAILS
+    // ==========================================
+
     .populate(
         "project",
         "title owner"
     )
 
+    // ==========================================
+    // COMPLETE USER PROFILE
+    // SAME FIELDS AS PROFILE PAGE
+    // ==========================================
+
     .populate(
         "user",
-        "name email profileImage skills"
+        `
+                name
+                email
+                profileImage
+                bio
+                location
+                college
+                course
+                graduationYear
+                skills
+                experienceLevel
+                interests
+                github
+                linkedin
+                portfolio
+            `
     )
 
     .sort({

@@ -467,19 +467,35 @@ const PublicProfilePage = () => {
 
                             {user.email && (
 
-                                <p
-                                    className="
-                                        !mt-2
-                                        !mb-0
-                                        !break-all
-                                        !text-sm
-                                        !text-slate-400
-                                    "
-                                >
-                                    {user.email}
-                                </p>
+    <a
+        href={`mailto:${user.email}`}
+        className="
+            !mt-2
+            !inline-flex
+            !max-w-full
+            !items-center
+            !gap-2
+            !break-all
+            !text-sm
+            !font-medium
+            !text-slate-400
+            !no-underline
+            !transition
+            hover:!text-emerald-300
+        "
+    >
 
-                            )}
+        <span>
+            ✉
+        </span>
+
+        <span>
+            {user.email}
+        </span>
+
+    </a>
+
+)}
 
 
                             <div

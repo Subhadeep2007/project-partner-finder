@@ -54,12 +54,12 @@ const getProjectById = async(projectId) => {
 
     .populate(
         "owner",
-        "name profileImage skills bio location college course github linkedin portfolio"
+        "name email profileImage skills bio location college course github linkedin portfolio"
     )
 
     .populate(
         "members",
-        "name profileImage skills bio location college course github linkedin portfolio"
+        "name email profileImage skills bio location college course github linkedin portfolio"
     );
 
 

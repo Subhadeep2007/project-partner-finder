@@ -39,6 +39,9 @@ const EditProjectPage = () => {
             description:
                 "",
 
+            githubRepo:
+                "",
+
             requiredSkills:
                 "",
 
@@ -79,7 +82,9 @@ const EditProjectPage = () => {
 
                 try {
 
-                    setLoading(true);
+                    setLoading(
+                        true
+                    );
 
                     setError("");
 
@@ -107,6 +112,10 @@ const EditProjectPage = () => {
 
                         description:
                             projectData.description ||
+                            "",
+
+                        githubRepo:
+                            projectData.githubRepo ||
                             "",
 
                         requiredSkills:
@@ -151,7 +160,9 @@ const EditProjectPage = () => {
 
                 } finally {
 
-                    setLoading(false);
+                    setLoading(
+                        false
+                    );
 
                 }
 
@@ -223,6 +234,10 @@ const EditProjectPage = () => {
 
                     description:
                         formData.description
+                            .trim(),
+
+                    githubRepo:
+                        formData.githubRepo
                             .trim(),
 
                     requiredSkills:
@@ -377,6 +392,7 @@ const EditProjectPage = () => {
                             "
                         />
 
+
                         <div
                             className="
                                 !h-12
@@ -385,6 +401,7 @@ const EditProjectPage = () => {
                                 !bg-slate-800
                             "
                         />
+
 
                         <div
                             className="
@@ -1181,6 +1198,73 @@ const EditProjectPage = () => {
                                 focus:!ring-emerald-400/10
                             "
                         />
+
+                    </div>
+
+
+                    {/* GITHUB REPOSITORY */}
+
+                    <div
+                        className="
+                            !mt-5
+                            !space-y-2
+                        "
+                    >
+
+                        <label
+                            htmlFor="githubRepo"
+                            className="
+                                !block
+                                !text-sm
+                                !font-semibold
+                                !text-slate-300
+                            "
+                        >
+                            GitHub Repository
+                        </label>
+
+
+                        <input
+                            id="githubRepo"
+                            type="url"
+                            name="githubRepo"
+                            value={
+                                formData.githubRepo
+                            }
+                            onChange={
+                                handleChange
+                            }
+                            placeholder="https://github.com/username/project"
+                            required
+                            className="
+                                !h-12
+                                !w-full
+                                !rounded-xl
+                                !border
+                                !border-white/10
+                                !bg-black/20
+                                !px-4
+                                !text-sm
+                                !text-white
+                                !outline-none
+                                focus:!border-emerald-400/40
+                                focus:!ring-2
+                                focus:!ring-emerald-400/10
+                            "
+                        />
+
+
+                        <p
+                            className="
+                                !m-0
+                                !text-xs
+                                !text-slate-600
+                            "
+                        >
+                            Example:
+                            {" "}
+                            https://github.com/username/project
+                        </p>
 
                     </div>
 
