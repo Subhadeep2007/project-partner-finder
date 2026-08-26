@@ -1,6 +1,6 @@
 import Project from "../../models/project.js";
 import JoinRequest from "../../models/joinRequest.js";
-import User from "../../models/User.js";
+import User from "../../models/user.js";
 import sendEmail from "../../utils/sendEmail.js";
 
 import {
