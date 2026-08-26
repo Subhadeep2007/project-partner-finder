@@ -2,7 +2,8 @@ import {
     getMyNotifications,
     markNotificationAsRead,
     markAllNotificationsAsRead,
-    deleteNotification
+    deleteNotification,
+    sendComeOnlineRequest
 } from "../../services/notification/notification.service.js";
 
 
@@ -110,10 +111,48 @@ const deleteNotificationController =
         }
 
     };
+const sendComeOnlineRequestController =
+    async(
+        req,
+        res,
+        next
+    ) => {
 
+        try {
+
+            const notification =
+                await sendComeOnlineRequest({
+
+                    projectId: req.body.projectId,
+
+                    memberId: req.body.memberId,
+
+                    senderId: req.user.userId
+
+                });
+
+
+            return res.status(201).json({
+
+                success: true,
+
+                message: "Come online notification sent successfully",
+
+                data: notification
+
+            });
+
+        } catch (error) {
+
+            next(error);
+
+        }
+
+    };
 export {
     getMyNotificationsController,
     markNotificationAsReadController,
     markAllNotificationsAsReadController,
-    deleteNotificationController
+    deleteNotificationController,
+    sendComeOnlineRequestController
 };

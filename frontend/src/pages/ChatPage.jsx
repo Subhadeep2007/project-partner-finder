@@ -33,7 +33,8 @@ import {
 import api from "../api/axios";
 
 import {
-    getProjectE2EEKeys
+    getProjectE2EEKeys,
+    getProjectById
 } from "../services/project.service";
 
 
@@ -92,6 +93,30 @@ const [editingMessageId, setEditingMessageId] =
 
 const [editingText, setEditingText] =
     useState("");
+
+    const [project, setProject] =
+        useState(null);
+
+    const [onlineMembers, setOnlineMembers] =
+        useState([]);
+
+    const [lastSeenMap, setLastSeenMap] =
+        useState({});
+
+    const [typingUserIds, setTypingUserIds] =
+        useState([]);
+
+    const [notifyingMemberId, setNotifyingMemberId] =
+        useState(null);
+
+    const [notifiedMemberIds, setNotifiedMemberIds] =
+        useState([]);
+
+    const typingTimeoutsRef =
+        useRef(new Map());
+
+    const localTypingTimeoutRef =
+        useRef(null);
 
     // ==========================================
     // GET ID
@@ -199,6 +224,49 @@ const [editingText, setEditingText] =
         }
 
     }, []);
+
+useEffect(() => {
+
+    if (!projectId) {
+        return;
+    }
+
+    let isMounted = true;
+
+    const fetchProject = async() => {
+
+        try {
+
+            const response =
+                await getProjectById(
+                    projectId
+                );
+
+            if (isMounted) {
+                setProject(
+                    response.data
+                );
+            }
+
+        } catch (error) {
+
+            console.error(
+                "Failed to load project members:",
+                error
+            );
+
+        }
+
+    };
+
+    fetchProject();
+
+    return () => {
+        isMounted = false;
+    };
+
+}, [projectId]);
+
 
 useEffect(() => {
 
@@ -674,6 +742,173 @@ const decryptSingleMessage = async(
     currentUserId
 ]);
     // ==========================================
+    const getProjectMembers = () => {
+
+        if (!project) {
+            return [];
+        }
+
+        const owner = project.owner || null;
+        const members = Array.isArray(project.members)
+            ? project.members
+            : [];
+
+        const users = [];
+
+        if (owner) {
+            users.push(owner);
+        }
+
+        members.forEach((member) => {
+
+            const memberId = getId(member);
+
+            if (!users.some((user) => getId(user) === memberId)) {
+                users.push(member);
+            }
+
+        });
+
+        return users;
+
+    };
+
+
+    const formatLastSeen = (value) => {
+
+        if (!value) {
+            return "Last seen unavailable";
+        }
+
+        const date = new Date(value);
+
+        if (Number.isNaN(date.getTime())) {
+            return "Last seen unavailable";
+        }
+
+        return `Last seen ${date.toLocaleString([], {
+            day: "2-digit",
+            month: "short",
+            hour: "2-digit",
+            minute: "2-digit"
+        })}`;
+
+    };
+
+
+    const isUserOnline = (userId) => {
+
+        return onlineMembers.some(
+            (id) => String(id) === String(userId)
+        );
+
+    };
+
+
+    const isUserTyping = (userId) => {
+
+        return typingUserIds.some(
+            (id) => String(id) === String(userId)
+        );
+
+    };
+
+
+    // ==========================================
+    // SEND COME ONLINE NOTIFICATION
+    // ==========================================
+
+    const handleNotifyMember = async(
+        memberId
+    ) => {
+
+        if (
+            !memberId ||
+            !projectId ||
+            String(memberId) === String(currentUserId)
+        ) {
+            return;
+        }
+
+
+        if (
+            notifiedMemberIds.some(
+                (id) =>
+                    String(id) === String(memberId)
+            )
+        ) {
+            return;
+        }
+
+
+        try {
+
+            setNotifyingMemberId(
+                String(memberId)
+            );
+
+            setError("");
+
+
+            await api.post(
+                "/notifications/come-online-request",
+                {
+                    projectId,
+                    memberId
+                }
+            );
+
+
+            setNotifiedMemberIds(
+                (previousIds) => {
+
+                    if (
+                        previousIds.some(
+                            (id) =>
+                                String(id) === String(memberId)
+                        )
+                    ) {
+                        return previousIds;
+                    }
+
+
+                    return [
+                        ...previousIds,
+                        String(memberId)
+                    ];
+
+                }
+            );
+
+        } catch (error) {
+
+            setError(
+                error &&
+                error.response &&
+                error.response.data &&
+                error.response.data.message
+                    ?
+                    error.response.data.message
+                    :
+                    error &&
+                    error.message
+                        ?
+                        error.message
+                        :
+                        "Failed to send notification"
+            );
+
+        } finally {
+
+            setNotifyingMemberId(
+                null
+            );
+
+        }
+
+    };
+
+
     // SOCKET
     // ==========================================
 
@@ -804,6 +1039,173 @@ const decryptSingleMessage = async(
         
 
         // ==========================================
+        const handleProjectOnlineMembers = (data) => {
+
+            const onlineIds = Array.isArray(data?.onlineMembers)
+                ? data.onlineMembers.map((id) => String(id))
+                : [];
+
+            setOnlineMembers(onlineIds);
+
+        };
+
+
+        const handleProjectMemberOnline = ({
+            projectId: presenceProjectId,
+            userId
+        }) => {
+
+            if (String(presenceProjectId) !== String(projectId)) {
+                return;
+            }
+
+            const normalizedUserId = String(userId);
+
+            setOnlineMembers((previous) => {
+
+                if (previous.includes(normalizedUserId)) {
+                    return previous;
+                }
+
+                return [...previous, normalizedUserId];
+
+            });
+
+        };
+
+
+        const handleProjectMemberOffline = ({
+            projectId: presenceProjectId,
+            userId
+        }) => {
+
+            if (String(presenceProjectId) !== String(projectId)) {
+                return;
+            }
+
+            const normalizedUserId = String(userId);
+
+            setOnlineMembers((previous) =>
+                previous.filter((id) => String(id) !== normalizedUserId)
+            );
+
+        };
+
+
+        const handleUserOffline = ({
+            userId,
+            lastSeen
+        }) => {
+
+            if (!userId) {
+                return;
+            }
+
+            const normalizedUserId = String(userId);
+
+            setOnlineMembers((previous) =>
+                previous.filter((id) => String(id) !== normalizedUserId)
+            );
+
+            if (lastSeen) {
+                setLastSeenMap((previous) => ({
+                    ...previous,
+                    [normalizedUserId]: lastSeen
+                }));
+            }
+
+        };
+
+
+        const handleUserTyping = ({
+            projectId: typingProjectId,
+            userId,
+            isTyping
+        }) => {
+
+            if (
+                String(typingProjectId) !== String(projectId) ||
+                !userId ||
+                String(userId) === String(currentUserId)
+            ) {
+                return;
+            }
+
+            const normalizedUserId = String(userId);
+
+            const existingTimeout =
+                typingTimeoutsRef.current.get(normalizedUserId);
+
+            if (existingTimeout) {
+                clearTimeout(existingTimeout);
+            }
+
+            if (!isTyping) {
+
+                typingTimeoutsRef.current.delete(normalizedUserId);
+
+                setTypingUserIds((previous) =>
+                    previous.filter((id) => String(id) !== normalizedUserId)
+                );
+
+                return;
+
+            }
+
+            setTypingUserIds((previous) => {
+
+                if (previous.includes(normalizedUserId)) {
+                    return previous;
+                }
+
+                return [...previous, normalizedUserId];
+
+            });
+
+            const timeout = setTimeout(() => {
+
+                setTypingUserIds((previous) =>
+                    previous.filter((id) => String(id) !== normalizedUserId)
+                );
+
+                typingTimeoutsRef.current.delete(normalizedUserId);
+
+            }, 3500);
+
+            typingTimeoutsRef.current.set(
+                normalizedUserId,
+                timeout
+            );
+
+        };
+
+
+        socket.on(
+            "project_online_members",
+            handleProjectOnlineMembers
+        );
+
+        socket.on(
+            "project_member_online",
+            handleProjectMemberOnline
+        );
+
+        socket.on(
+            "project_member_offline",
+            handleProjectMemberOffline
+        );
+
+        socket.on(
+            "user_offline",
+            handleUserOffline
+        );
+
+        socket.on(
+            "user_typing",
+            handleUserTyping
+        );
+
+
         // RECEIVE MESSAGE
         // ==========================================
 
@@ -1396,6 +1798,18 @@ const handleMemberJoined =
 
         return () => {
 
+            if (localTypingTimeoutRef.current) {
+                clearTimeout(
+                    localTypingTimeoutRef.current
+                );
+                localTypingTimeoutRef.current = null;
+            }
+
+            socket.emit(
+                "typing_stop",
+                { projectId }
+            );
+
             socket.emit(
                 "leave_project",
                 {
@@ -1420,6 +1834,42 @@ const handleMemberJoined =
                 "connect_error",
                 handleConnectError
             );
+
+            socket.off(
+                "project_online_members",
+                handleProjectOnlineMembers
+            );
+
+            socket.off(
+                "project_member_online",
+                handleProjectMemberOnline
+            );
+
+            socket.off(
+                "project_member_offline",
+                handleProjectMemberOffline
+            );
+
+            socket.off(
+                "user_offline",
+                handleUserOffline
+            );
+
+            socket.off(
+                "user_typing",
+                handleUserTyping
+            );
+
+            if (localTypingTimeoutRef.current) {
+                clearTimeout(localTypingTimeoutRef.current);
+                localTypingTimeoutRef.current = null;
+            }
+
+            typingTimeoutsRef.current.forEach(
+                (timeout) => clearTimeout(timeout)
+            );
+
+            typingTimeoutsRef.current.clear();
 
             socket.off(
                 "request_message_rekey",
@@ -1599,6 +2049,18 @@ const handleMemberJoined =
 
 
                         setMessageText("");
+
+                        if (localTypingTimeoutRef.current) {
+                            clearTimeout(
+                                localTypingTimeoutRef.current
+                            );
+                            localTypingTimeoutRef.current = null;
+                        }
+
+                        socket.emit(
+                            "typing_stop",
+                            { projectId }
+                        );
 
                     }
 
@@ -2435,7 +2897,221 @@ const handleSaveEdit = async(
 
                 </div>
 
-            </div>
+
+
+                {/* TEAM PRESENCE */}
+
+                <div
+                    className="
+                        !mt-3
+                        !w-full
+                    "
+                >
+
+                    <div
+                        className="
+                            !rounded-2xl
+                            !border
+                            !border-white/10
+                            !bg-white/[0.02]
+                            !p-3
+                        "
+                    >
+
+                        <div
+                            className="
+                                !flex
+                                !items-center
+                                !justify-between
+                                !gap-3
+                            "
+                        >
+                            <span
+                                className="
+                                    !font-mono
+                                    !text-[10px]
+                                    !font-bold
+                                    !uppercase
+                                    !tracking-widest
+                                    !text-slate-500
+                                "
+                            >
+                                Team Presence
+                            </span>
+
+                            <span
+                                className="
+                                    !text-[10px]
+                                    !font-semibold
+                                    !text-slate-600
+                                "
+                            >
+                                {onlineMembers.length} online
+                            </span>
+                        </div>
+
+                        <div
+                            className="
+                                !mt-3
+                                !flex
+                                !max-h-28
+                                !flex-wrap
+                                !gap-2
+                                !overflow-y-auto
+                            "
+                        >
+                            {getProjectMembers().length === 0 ? (
+                                <span
+                                    className="
+                                        !text-xs
+                                        !text-slate-600
+                                    "
+                                >
+                                    Loading team...
+                                </span>
+                            ) : (
+                                getProjectMembers().map((member) => {
+
+                                    const memberId = getId(member);
+                                    const online = isUserOnline(memberId);
+                                    const typing = isUserTyping(memberId);
+
+                                    return (
+                                        <div
+                                            key={memberId}
+                                            className="
+                                                !flex
+                                                !min-w-0
+                                                !items-center
+                                                !gap-2
+                                                !rounded-xl
+                                                !border
+                                                !border-white/10
+                                                !bg-black/10
+                                                !px-2.5
+                                                !py-2
+                                            "
+                                            title={
+                                                online
+                                                    ? typing
+                                                        ? "Typing..."
+                                                        : "Online"
+                                                    : lastSeenMap[memberId]
+                                                        ? formatLastSeen(lastSeenMap[memberId])
+                                                        : member.lastSeen
+                                                            ? formatLastSeen(member.lastSeen)
+                                                            : "Offline"
+                                            }
+                                        >
+                                            <span
+                                                className={`
+                                                    !h-2
+                                                    !w-2
+                                                    !shrink-0
+                                                    !rounded-full
+                                                    ${
+                                                        online
+                                                            ? "!bg-emerald-400"
+                                                            : "!bg-slate-600"
+                                                    }
+                                                `}
+                                            />
+
+                                            <span
+                                                className="
+                                                    !max-w-[120px]
+                                                    !truncate
+                                                    !text-xs
+                                                    !font-semibold
+                                                    !text-slate-300
+                                                "
+                                            >
+                                                {member.name || "User"}
+                                            </span>
+
+                                            {typing && (
+                                                <span
+                                                    className="
+                                                        !ml-auto
+                                                        !text-[10px]
+                                                        !font-semibold
+                                                        !text-emerald-300
+                                                    "
+                                                >
+                                                    typing...
+                                                </span>
+                                            )}
+
+                                            {!online && !typing && (
+                                                <>
+                                                    <span
+                                                        className="
+                                                            !ml-auto
+                                                            !text-[9px]
+                                                            !text-slate-600
+                                                        "
+                                                    >
+                                                        offline
+                                                    </span>
+
+
+                                                    {String(memberId) !==
+                                                        String(currentUserId) && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() =>
+                                                                handleNotifyMember(
+                                                                    memberId
+                                                                )
+                                                            }
+                                                            disabled={
+                                                                notifyingMemberId ===
+                                                                    String(memberId) ||
+                                                                notifiedMemberIds.some(
+                                                                    (id) =>
+                                                                        String(id) ===
+                                                                        String(memberId)
+                                                                )
+                                                            }
+                                                            className="
+                                                                !rounded-lg
+                                                                !border
+                                                                !border-emerald-400/20
+                                                                !bg-emerald-400/5
+                                                                !px-2
+                                                                !py-1
+                                                                !text-[9px]
+                                                                !font-bold
+                                                                !text-emerald-300
+                                                                !transition
+                                                                hover:!border-emerald-400/40
+                                                                hover:!bg-emerald-400/10
+                                                                disabled:!cursor-not-allowed
+                                                                disabled:!opacity-50
+                                                            "
+                                                        >
+                                                            {notifyingMemberId ===
+                                                            String(memberId)
+                                                                ? "Sending..."
+                                                                : notifiedMemberIds.some(
+                                                                    (id) =>
+                                                                        String(id) ===
+                                                                        String(memberId)
+                                                                )
+                                                                    ? "✓ Sent"
+                                                                    : "Notify"}
+                                                        </button>
+                                                    )}
+                                                </>
+                                            )}
+                                        </div>
+                                    );
+
+                                })
+                            )}
+                        </div>
+                    </div>
+                </div>            </div>
 
         </header>
 
@@ -3329,6 +4005,48 @@ const handleSaveEdit = async(
 
 
                 {/* ======================================
+                    TYPING INDICATOR
+                ====================================== */}
+
+                {typingUserIds.length > 0 && (
+                    <div
+                        className="
+                            !shrink-0
+                            !px-3
+                            !pb-2
+                            sm:!px-6
+                            lg:!px-8
+                        "
+                    >
+                        <div
+                            className="
+                                !mx-auto
+                                !flex
+                                !w-full
+                                !max-w-5xl
+                                !items-center
+                                !gap-2
+                                !text-xs
+                                !text-slate-500
+                            "
+                        >
+                            <span className="!flex !items-center !gap-1">
+                                <span className="!animate-bounce !text-emerald-400">●</span>
+                                <span className="!animate-bounce !text-emerald-400 [animation-delay:120ms]">●</span>
+                                <span className="!animate-bounce !text-emerald-400 [animation-delay:240ms]">●</span>
+                            </span>
+
+                            <span>
+                                {typingUserIds.length === 1
+                                    ? "Someone is typing..."
+                                    : `${typingUserIds.length} people are typing...`}
+                            </span>
+                        </div>
+                    </div>
+                )}
+
+
+                {/* ======================================
                     MESSAGE COMPOSER
                 ====================================== */}
 
@@ -3420,11 +4138,56 @@ const handleSaveEdit = async(
                             }
                             onChange={(
                                 event
-                            ) =>
+                            ) => {
+
+                                const value =
+                                    event.target.value;
+
                                 setMessageText(
-                                    event.target.value
-                                )
-                            }
+                                    value
+                                );
+
+                                if (
+                                    !socket.connected ||
+                                    !projectId ||
+                                    !currentUserId
+                                ) {
+                                    return;
+                                }
+
+                                if (localTypingTimeoutRef.current) {
+                                    clearTimeout(
+                                        localTypingTimeoutRef.current
+                                    );
+                                }
+
+                                if (!value.trim()) {
+
+                                    socket.emit(
+                                        "typing_stop",
+                                        { projectId }
+                                    );
+
+                                    return;
+
+                                }
+
+                                socket.emit(
+                                    "typing_start",
+                                    { projectId }
+                                );
+
+                                localTypingTimeoutRef.current =
+                                    setTimeout(() => {
+
+                                        socket.emit(
+                                            "typing_stop",
+                                            { projectId }
+                                        );
+
+                                    }, 2500);
+
+                            }}
                             placeholder={
                                 socketStatus ===
                                 "connected"

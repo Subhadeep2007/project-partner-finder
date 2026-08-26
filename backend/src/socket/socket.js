@@ -2,7 +2,7 @@ import { Server } from "socket.io";
 import jwt from "jsonwebtoken";
 
 import Project from "../models/project.js";
-
+import User from "../models/user.js";
 import {
     createMessage,
     markDelivered,
@@ -988,7 +988,7 @@ const initializeSocket = (server) => {
 
         socket.on(
             "disconnect",
-            () => {
+            async() => {
 
                 const userSockets =
                     onlineUsers.get(userId);
@@ -1001,7 +1001,11 @@ const initializeSocket = (server) => {
                     );
 
 
-                    // No active device/tab left
+                    // ==========================================
+                    // USER COMPLETELY OFFLINE
+                    // ONLY WHEN LAST SOCKET IS GONE
+                    // ==========================================
+
                     if (
                         userSockets.size === 0
                     ) {
@@ -1011,7 +1015,36 @@ const initializeSocket = (server) => {
                         );
 
 
-                        // Notify all projects
+                        // ==========================================
+                        // SAVE LAST SEEN
+                        // ==========================================
+
+                        const lastSeen =
+                            new Date();
+
+
+                        try {
+
+                            await User.findByIdAndUpdate(
+                                userId, {
+                                    lastSeen
+                                }
+                            );
+
+                        } catch (error) {
+
+                            console.error(
+                                "Failed to update last seen:",
+                                error.message
+                            );
+
+                        }
+
+
+                        // ==========================================
+                        // NOTIFY PROJECT MEMBERS
+                        // ==========================================
+
                         emitPresenceToUserProjects(
                             userId,
                             "user_offline"
@@ -1036,7 +1069,6 @@ const initializeSocket = (server) => {
 
             }
         );
-
     });
 
 

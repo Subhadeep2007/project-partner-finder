@@ -23,7 +23,8 @@ const notificationSchema = new mongoose.Schema({
             "new_message",
             "member_joined",
             "member_left",
-            "member_removed"
+            "member_removed",
+            "come_online_request"
         ],
         required: true
     },

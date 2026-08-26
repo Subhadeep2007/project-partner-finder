@@ -69,7 +69,10 @@ const userSchema = new mongoose.Schema({
         default: true
     },
 
-
+    lastSeen: {
+        type: Date,
+        default: null
+    },
 
     bio: {
         type: String,

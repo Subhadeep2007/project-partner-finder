@@ -210,9 +210,22 @@ const NotificationsPage = () => {
                     notification.project._id
                 ) {
 
-                    navigate(
-                        `/projects/${notification.project._id}`
-                    );
+                    if (
+                        notification.type ===
+                        "come_online_request"
+                    ) {
+
+                        navigate(
+                            `/projects/${notification.project._id}/chat`
+                        );
+
+                    } else {
+
+                        navigate(
+                            `/projects/${notification.project._id}`
+                        );
+
+                    }
 
                 }
 
@@ -502,6 +515,16 @@ const NotificationsPage = () => {
             ) {
 
                 return "💬";
+
+            }
+
+
+            if (
+                type ===
+                "come_online_request"
+            ) {
+
+                return "📣";
 
             }
 
@@ -1433,7 +1456,12 @@ const NotificationsPage = () => {
                                                                 disabled:!opacity-50
                                                             "
                                                         >
-                                                            View Project →
+                                                            {
+                                                                notification.type ===
+                                                                "come_online_request"
+                                                                    ? "Open Project Chat →"
+                                                                    : "View Project →"
+                                                            }
                                                         </button>
 
                                                     )}

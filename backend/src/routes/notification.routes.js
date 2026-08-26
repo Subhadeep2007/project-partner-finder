@@ -6,7 +6,8 @@ import {
     getMyNotificationsController,
     markNotificationAsReadController,
     markAllNotificationsAsReadController,
-    deleteNotificationController
+    deleteNotificationController,
+    sendComeOnlineRequestController
 
 } from "../controllers/notification/notification.controller.js";
 
@@ -40,6 +41,10 @@ router.patch(
     authMiddleware,
     markNotificationAsReadController
 );
-
+router.post(
+    "/come-online-request",
+    authMiddleware,
+    sendComeOnlineRequestController
+);
 
 export default router;
