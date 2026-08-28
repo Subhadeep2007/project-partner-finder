@@ -830,19 +830,27 @@ const decryptSingleMessage = async(
 
 
             const decryptedMessages =
-                await decryptAllMessages(
-                    messagesWithResolvedReplies,
-                    currentUserId
-                );
+    await decryptAllMessages(
+        messagesWithResolvedReplies,
+        currentUserId
+    );
 
 
-            if (isMounted) {
+// Backend messages are returned
+// newest -> oldest.
+// Chat UI should display
+// oldest -> newest.
+const orderedMessages =
+    [...decryptedMessages].reverse();
 
-                setMessages(
-                    decryptedMessages
-                );
 
-            }
+if (isMounted) {
+
+    setMessages(
+        orderedMessages
+    );
+
+}
 
         } catch (error) {
 
@@ -1127,12 +1135,20 @@ const decryptSingleMessage = async(
                     : [];
 
             const decryptedMessages =
-                await decryptAllMessages(
-                    latestMessages,
-                    currentUserId
-                );
+    await decryptAllMessages(
+        latestMessages,
+        currentUserId
+    );
 
-            setMessages(decryptedMessages);
+
+// Keep the same chat order after re-key refresh.
+const orderedMessages =
+    [...decryptedMessages].reverse();
+
+
+setMessages(
+    orderedMessages
+);
 
             console.log(
                 "Messages refreshed after E2EE re-key"
