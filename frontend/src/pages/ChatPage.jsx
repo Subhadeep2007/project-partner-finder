@@ -76,7 +76,8 @@ const messagesRef =
 
     const [uploading, setUploading] =
         useState(false);
-
+const [replyingTo, setReplyingTo] =
+    useState(null);
 
     const [openMenuId, setOpenMenuId] =
         useState(null);
@@ -410,6 +411,70 @@ useEffect(() => {
     };
 
 
+    // ==========================================
+    // REPLY HELPERS
+    // ==========================================
+
+    const getReplyPreviewText = (message) => {
+
+        if (!message) {
+            return "";
+        }
+
+        if (message.isDeletedForEveryone) {
+            return "This message was deleted";
+        }
+
+        return (
+            message.decryptedContent ||
+            message.content ||
+            "Encrypted message"
+        );
+
+    };
+
+
+    const resolveReplyMessage = (message, sourceMessages = []) => {
+
+        if (!message || !message.replyTo) {
+            return message;
+        }
+
+        if (
+            typeof message.replyTo === "object" &&
+            message.replyTo !== null
+        ) {
+            return message;
+        }
+
+        const replyId = String(
+            getId(message.replyTo)
+        );
+
+        if (!replyId) {
+            return message;
+        }
+
+        const originalMessage =
+            Array.isArray(sourceMessages)
+                ? sourceMessages.find(
+                    (item) =>
+                        String(item?._id) === replyId
+                )
+                : null;
+
+        if (!originalMessage) {
+            return message;
+        }
+
+        return {
+            ...message,
+            replyTo: originalMessage
+        };
+
+    };
+
+
     // DECRYPT SINGLE MESSAGE
     // ==========================================
 
@@ -563,10 +628,91 @@ const decryptSingleMessage = async(
             });
 
 
+        let decryptedReply = null;
+
+        if (
+            message.replyTo &&
+            typeof message.replyTo === "object" &&
+            message.replyTo !== null
+        ) {
+
+            try {
+
+                if (message.replyTo.isDeletedForEveryone) {
+
+                    decryptedReply = {
+                        ...message.replyTo,
+                        decryptedContent:
+                            "This message was deleted"
+                    };
+
+                } else if (
+                    message.replyTo.encryptedContent &&
+                    message.replyTo.iv &&
+                    Array.isArray(
+                        message.replyTo.encryptedKeys
+                    )
+                ) {
+
+                    decryptedReply =
+                        await decryptSingleMessage(
+                            message.replyTo,
+                            currentUserId
+                        );
+
+                } else {
+
+                    decryptedReply = {
+                        ...message.replyTo,
+                        decryptedContent:
+                            getReplyPreviewText(
+                                message.replyTo
+                            )
+                    };
+
+                }
+
+            } catch (replyError) {
+
+                console.error(
+                    "Reply message decryption failed:",
+                    replyError
+                );
+
+            }
+
+        }
+
+
         return {
             ...message,
 
-            decryptedContent
+            decryptedContent,
+
+            replyTo:
+                message.replyTo &&
+                typeof message.replyTo === "object"
+                    ? {
+                        ...message.replyTo,
+
+                        decryptedContent:
+                            decryptedReply?.decryptedContent ||
+                            getReplyPreviewText(
+                                message.replyTo
+                            )
+                    }
+                    : message.replyTo,
+
+            replyPreviewText:
+                decryptedReply?.decryptedContent ||
+                (
+                    message.replyTo &&
+                    typeof message.replyTo === "object"
+                        ? getReplyPreviewText(
+                            message.replyTo
+                        )
+                        : ""
+                )
 
         };
 
@@ -673,9 +819,19 @@ const decryptSingleMessage = async(
                     : [];
 
 
+            const messagesWithResolvedReplies =
+                loadedMessages.map(
+                    (message) =>
+                        resolveReplyMessage(
+                            message,
+                            loadedMessages
+                        )
+                );
+
+
             const decryptedMessages =
                 await decryptAllMessages(
-                    loadedMessages,
+                    messagesWithResolvedReplies,
                     currentUserId
                 );
 
@@ -1338,9 +1494,16 @@ const decryptSingleMessage = async(
                 }
 
 
+                const messageWithReply =
+                    resolveReplyMessage(
+                        message,
+                        messagesRef.current
+                    );
+
+
                 const decryptedMessage =
                     await decryptSingleMessage(
-                        message,
+                        messageWithReply,
                         currentUserId
                     );
 
@@ -2069,7 +2232,46 @@ const handleMemberJoined =
         currentUserId
     ]);
 
+const handleReplyToMessage = (
+    message
+) => {
 
+    if (!message) {
+        return;
+    }
+
+    setReplyingTo({
+        _id: message._id,
+        sender: message.sender,
+        messageType: message.messageType,
+        decryptedContent:
+            message.decryptedContent ||
+            message.content ||
+            "Encrypted message",
+        content: message.content || "",
+        encryptedContent:
+            message.encryptedContent || "",
+        iv: message.iv || "",
+        encryptedKeys:
+            Array.isArray(message.encryptedKeys)
+                ? message.encryptedKeys
+                : [],
+        isDeletedForEveryone:
+            Boolean(
+                message.isDeletedForEveryone
+            )
+    });
+
+    setOpenMenuId(null);
+
+};
+
+
+const handleCancelReply = () => {
+
+    setReplyingTo(null);
+
+};
     // ==========================================
     // SEND MESSAGE
     // ==========================================
@@ -2192,7 +2394,12 @@ const handleMemberJoined =
                         encryptedKeys,
 
                         messageType:
-                            "text"
+                            "text",
+
+                        replyTo:
+                            replyingTo
+                                ? replyingTo._id
+                                : null
 
                     },
 
@@ -2214,6 +2421,7 @@ const handleMemberJoined =
 
 
                         setMessageText("");
+                        setReplyingTo(null);
 
                         if (localTypingTimeoutRef.current) {
                             clearTimeout(
@@ -3781,6 +3989,29 @@ const handleSaveEdit = async(
                                                                     <button
                                                                         type="button"
                                                                         onClick={() =>
+                                                                            handleReplyToMessage(
+                                                                                message
+                                                                            )
+                                                                        }
+                                                                        className="
+                                                                            !flex
+                                                                            !w-full
+                                                                            !px-4
+                                                                            !py-3
+                                                                            !text-left
+                                                                            !text-sm
+                                                                            !text-slate-200
+                                                                            !transition
+                                                                            hover:!bg-white/5
+                                                                        "
+                                                                    >
+                                                                        ↩ Reply
+                                                                    </button>
+
+
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() =>
                                                                             handleDeleteForMe(
                                                                                 message._id
                                                                             )
@@ -4058,6 +4289,62 @@ const handleSaveEdit = async(
                                                 )}
 
 
+                                                {/* REPLIED MESSAGE */}
+
+                                                {message.replyTo && (
+
+                                                    <div
+                                                        className="
+                                                            !mb-3
+                                                            !rounded-xl
+                                                            !border
+                                                            !border-white/10
+                                                            !bg-black/20
+                                                            !px-3
+                                                            !py-2.5
+                                                        "
+                                                    >
+
+                                                        <p
+                                                            className="
+                                                                !m-0
+                                                                !text-[10px]
+                                                                !font-black
+                                                                !uppercase
+                                                                !tracking-[0.12em]
+                                                                !text-emerald-400
+                                                            "
+                                                        >
+                                                            Replying to{" "}
+                                                            {message.replyTo.sender?.name ||
+                                                                "message"}
+                                                        </p>
+
+
+                                                        <p
+                                                            className="
+                                                                !mt-1
+                                                                !mb-0
+                                                                !truncate
+                                                                !text-xs
+                                                                !text-slate-400
+                                                            "
+                                                        >
+                                                            {message.replyPreviewText ||
+                                                                (typeof message.replyTo === "object"
+                                                                    ? message.replyTo.isDeletedForEveryone
+                                                                        ? "This message was deleted"
+                                                                        : message.replyTo.decryptedContent ||
+                                                                          message.replyTo.content ||
+                                                                          "Encrypted message"
+                                                                    : "Original message unavailable")}
+                                                        </p>
+
+                                                    </div>
+
+                                                )}
+
+
                                                 {/* IMAGE */}
 
                                                 {!message.isDeletedForEveryone &&
@@ -4229,6 +4516,93 @@ const handleSaveEdit = async(
                         lg:!px-8
                     "
                 >
+
+                    {replyingTo && (
+
+                        <div
+                            className="
+                                !mx-auto
+                                !mb-2
+                                !flex
+                                !w-full
+                                !max-w-5xl
+                                !items-center
+                                !justify-between
+                                !gap-3
+                                !rounded-xl
+                                !border
+                                !border-emerald-400/20
+                                !bg-emerald-400/[0.04]
+                                !px-3
+                                !py-2.5
+                            "
+                        >
+
+                            <div className="!min-w-0">
+
+                                <p
+                                    className="
+                                        !m-0
+                                        !text-[10px]
+                                        !font-black
+                                        !uppercase
+                                        !tracking-[0.14em]
+                                        !text-emerald-400
+                                    "
+                                >
+                                    Replying to{" "}
+                                    {replyingTo.sender?.name ||
+                                        "message"}
+                                </p>
+
+
+                                <p
+                                    className="
+                                        !mt-1
+                                        !mb-0
+                                        !truncate
+                                        !text-xs
+                                        !text-slate-400
+                                    "
+                                >
+                                    {replyingTo.isDeletedForEveryone
+                                        ? "This message was deleted"
+                                        : replyingTo.decryptedContent ||
+                                          replyingTo.content ||
+                                          "Encrypted message"}
+                                </p>
+
+                            </div>
+
+
+                            <button
+                                type="button"
+                                onClick={
+                                    handleCancelReply
+                                }
+                                title="Cancel reply"
+                                className="
+                                    !flex
+                                    !h-8
+                                    !w-8
+                                    !shrink-0
+                                    !items-center
+                                    !justify-center
+                                    !rounded-lg
+                                    !text-lg
+                                    !text-slate-500
+                                    !transition
+                                    hover:!bg-white/5
+                                    hover:!text-white
+                                "
+                            >
+                                ×
+                            </button>
+
+                        </div>
+
+                    )}
+
 
                     <form
                         onSubmit={

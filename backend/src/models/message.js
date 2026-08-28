@@ -13,6 +13,12 @@ const messageSchema = new mongoose.Schema({
         ref: "User",
         required: true
     },
+
+    replyTo: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Message",
+        default: null
+    },
     isEdited: {
         type: Boolean,
         default: false
