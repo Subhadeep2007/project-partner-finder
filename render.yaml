@@ -1,9 +1,11 @@
 services:
-  - type: static
+  - type: web
+    runtime: static
     name: project-partner-finder-2
     rootDir: frontend
     buildCommand: npm install && npm run build
     staticPublishPath: dist
+
     routes:
       - type: rewrite
         source: /*
