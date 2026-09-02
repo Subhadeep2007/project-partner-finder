@@ -219,6 +219,18 @@ const ProjectDetailsPage = () => {
     useEffect(() => {
 
         let mounted = true;
+const accessToken =
+        localStorage.getItem("accessToken");
+
+    // ==========================================
+    // LOGIN CHECK
+    // ==========================================
+
+    if (!accessToken) {
+        setError("Please login first");
+        setLoading(false);
+        return;
+    }
 
         const fetchProject =
             async () => {

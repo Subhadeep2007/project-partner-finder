@@ -28,9 +28,13 @@ api.interceptors.response.use(
         const originalRequest = error.config;
 
         // Access token expired
+        const token =
+            localStorage.getItem("accessToken");
+
         if (
             error.response &&
             error.response.status === 401 &&
+            token &&
             !originalRequest._retry
         ) {
             originalRequest._retry = true;
