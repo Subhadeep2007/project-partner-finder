@@ -7,9 +7,11 @@ import {
     deleteMessageForEveryoneController,
     addEncryptedKeyForUserController,
     editMessageController,
-    uploadChatFileController
-} from "../controllers/message/message.controller.js";
 
+} from "../controllers/message/message.controller.js";
+import {
+    uploadChatFileController
+} from "../controllers/message/messageUpload.controller.js";
 import authMiddleware from "../middleware/auth.middleware.js";
 import chatUpload from "../middleware/chatUpload.middleware.js";
 const router = express.Router();
