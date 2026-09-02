@@ -288,35 +288,27 @@ const uploadChatFileController = async(
         const messageData = message.toObject();
 
 
-        const io =
-            getIO();
+        const io = getIO();
 
-
-        // ==========================================
-        // DEBUG
-        // ==========================================
+        const roomName = `project:${projectId}`;
+        const room = io.sockets.adapter.rooms.get(roomName);
 
         console.log(
-            "🔥 FILE MESSAGE CREATED:",
-            message._id.toString(),
-            "PROJECT:",
-            projectId,
-            "TYPE:",
-            message.messageType
+            "FILE SOCKET ROOM CHECK:",
+            roomName,
+            "SOCKET COUNT:",
+            room ? room.size : 0
         );
 
+        console.log(
+            "FILE SOCKET SOCKET IDS:",
+            room ? [...room] : []
+        );
 
-        // ==========================================
-        // PROJECT ROOM BROADCAST
-        // ==========================================
-
-        io.to(
-            `project:${projectId}`
-        ).emit(
+        io.to(roomName).emit(
             "receive_message",
             messageData
         );
-
 
         // ==========================================
         // PERSONAL USER ROOM BROADCAST
