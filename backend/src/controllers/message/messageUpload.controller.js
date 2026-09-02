@@ -122,7 +122,13 @@ const uploadChatFileController = async(
 
         const io =
             getIO();
-
+        console.log(
+            "FILE SOCKET BROADCAST:",
+            message._id.toString(),
+            message.project.toString(),
+            message.messageType,
+            message.fileUrl
+        );
 
         io.to(
             `project:${projectId}`
