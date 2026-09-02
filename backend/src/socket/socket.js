@@ -278,7 +278,11 @@ const initializeSocket =
                                 `project:${projectId}`
                             );
 
-
+                            console.log(
+                                "✅ PROJECT ROOM JOINED:",
+                                socket.id,
+                                `project:${projectId}`
+                            );
                             // ==========================================
                             // GET ONLINE MEMBERS
                             // ==========================================
