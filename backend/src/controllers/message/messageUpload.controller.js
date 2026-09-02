@@ -305,60 +305,65 @@ const uploadChatFileController = async(
             room ? [...room] : []
         );
 
-        io.to(roomName).emit(
-            "receive_message",
+        // io.to(roomName).emit(
+        //     "receive_message",
+        //     messageData
+        // );
+
+        // // ==========================================
+        // // PERSONAL USER ROOM BROADCAST
+        // // ==========================================
+
+        // const participantIds = [
+        //     project.owner.toString(),
+        //     ...project.members.map(
+        //         (memberId) =>
+        //         memberId.toString()
+        //     )
+        // ];
+
+
+        // const uniqueParticipantIds = [
+        //     ...new Set(
+        //         participantIds
+        //     )
+        // ];
+
+        // uniqueParticipantIds.forEach(
+        //     (participantId) => {
+
+        //         const personalRoom =
+        //             `user:${participantId}`;
+
+        //         const personalSockets =
+        //             io.sockets.adapter.rooms.get(
+        //                 personalRoom
+        //             );
+
+        //         console.log(
+        //             "FILE PERSONAL ROOM CHECK:",
+        //             personalRoom,
+        //             "SOCKET COUNT:",
+        //             personalSockets ?
+        //             personalSockets.size :
+        //             0
+        //         );
+
+        //         io.to(
+        //             personalRoom
+        //         ).emit(
+        //             "receive_message",
+        //             messageData
+        //         );
+
+        //     }
+        // );
+        io.to(
+            `project:${projectId}`
+        ).emit(
+            "file-uploaded",
             messageData
         );
-
-        // ==========================================
-        // PERSONAL USER ROOM BROADCAST
-        // ==========================================
-
-        const participantIds = [
-            project.owner.toString(),
-            ...project.members.map(
-                (memberId) =>
-                memberId.toString()
-            )
-        ];
-
-
-        const uniqueParticipantIds = [
-            ...new Set(
-                participantIds
-            )
-        ];
-
-        uniqueParticipantIds.forEach(
-            (participantId) => {
-
-                const personalRoom =
-                    `user:${participantId}`;
-
-                const personalSockets =
-                    io.sockets.adapter.rooms.get(
-                        personalRoom
-                    );
-
-                console.log(
-                    "FILE PERSONAL ROOM CHECK:",
-                    personalRoom,
-                    "SOCKET COUNT:",
-                    personalSockets ?
-                    personalSockets.size :
-                    0
-                );
-
-                io.to(
-                    personalRoom
-                ).emit(
-                    "receive_message",
-                    messageData
-                );
-
-            }
-        );
-
 
         console.log(
             "🔥 FILE SOCKET BROADCAST COMPLETE:",

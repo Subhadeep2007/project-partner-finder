@@ -2188,7 +2188,71 @@ const handleMemberJoined =
             handleReceiveMessage
         );
 
+const handleFileUploaded = (
+    uploadedMessage
+) => {
 
+    if (!uploadedMessage) {
+        return;
+    }
+
+    const receivedProjectId =
+        uploadedMessage.project?._id ||
+        uploadedMessage.project;
+
+    if (
+        String(receivedProjectId) !==
+        String(projectId)
+    ) {
+        return;
+    }
+
+    setMessages(
+        (previousMessages) => {
+
+            const messageId =
+                String(uploadedMessage._id);
+
+            const existingIndex =
+                previousMessages.findIndex(
+                    (existingMessage) =>
+                        String(existingMessage._id) ===
+                        messageId
+                );
+
+            if (existingIndex === -1) {
+                return [
+                    ...previousMessages,
+                    {
+                        ...uploadedMessage,
+                        decryptedContent: ""
+                    }
+                ];
+            }
+
+            const updatedMessages = [
+                ...previousMessages
+            ];
+
+            updatedMessages[
+                existingIndex
+            ] = {
+                ...updatedMessages[
+                    existingIndex
+                ],
+                ...uploadedMessage,
+                decryptedContent: ""
+            };
+
+            return updatedMessages;
+        }
+    );
+};
+
+socket.on(
+    "file-uploaded",
+    handleFileUploaded
+);
         socket.on(
             "message_deleted_for_everyone",
             handleMessageDeletedForEveryone
@@ -2294,7 +2358,10 @@ const handleMemberJoined =
                 "receive_message",
                 handleReceiveMessage
             );
-
+socket.off(
+    "file-uploaded",
+    handleFileUploaded
+);
 
             socket.off(
                 "message_deleted_for_everyone",
