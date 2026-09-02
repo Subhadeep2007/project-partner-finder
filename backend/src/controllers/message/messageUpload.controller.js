@@ -285,6 +285,7 @@ const uploadChatFileController = async(
             "sender",
             "name profileImage"
         );
+        const messageData = message.toObject();
 
 
         const io =
@@ -313,7 +314,7 @@ const uploadChatFileController = async(
             `project:${projectId}`
         ).emit(
             "receive_message",
-            message
+            messageData
         );
 
 
@@ -365,7 +366,7 @@ const uploadChatFileController = async(
 
             message: "File uploaded successfully",
 
-            data: message
+            data: messageData
 
         });
 

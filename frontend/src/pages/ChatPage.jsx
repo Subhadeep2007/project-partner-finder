@@ -1146,11 +1146,46 @@ const orderedMessages =
     [...decryptedMessages].reverse();
 
 
-setMessages(
-    orderedMessages
-);
 
-            console.log(
+
+   setMessages(
+    (previousMessages) => {
+        const messageMap = new Map();
+
+        orderedMessages.forEach((message) => {
+            if (message?._id) {
+                messageMap.set(
+                    String(message._id),
+                    message
+                );
+            }
+        });
+
+        previousMessages.forEach((message) => {
+            if (!message?._id) {
+                return;
+            }
+
+            const messageId =
+                String(message._id);
+
+            if (!messageMap.has(messageId)) {
+                messageMap.set(
+                    messageId,
+                    message
+                );
+            }
+        });
+
+        return Array.from(
+            messageMap.values()
+        ).sort(
+            (a, b) =>
+                new Date(a.createdAt) -
+                new Date(b.createdAt)
+        );
+    }
+);         console.log(
                 "Messages refreshed after E2EE re-key"
             );
 
@@ -1525,30 +1560,56 @@ setMessages(
 
 
                 setMessages(
-                    (previousMessages) => {
+    (previousMessages) => {
 
-                        const exists =
-                            previousMessages.some(
-                                (existingMessage) =>
-                                    existingMessage._id ===
-                                    decryptedMessage._id
-                            );
+        const messageId =
+            String(decryptedMessage._id);
 
+        const existingIndex =
+            previousMessages.findIndex(
+                (existingMessage) =>
+                    String(existingMessage._id) ===
+                    messageId
+            );
 
-                        if (exists) {
+        // Message doesn't exist yet.
+        // Add the new socket message.
+        if (existingIndex === -1) {
+            return [
+                ...previousMessages,
+                decryptedMessage
+            ];
+        }
 
-                            return previousMessages;
+        // Message already exists.
+        // Update it instead of ignoring it.
+        const updatedMessages = [
+            ...previousMessages
+        ];
 
-                        }
+        updatedMessages[existingIndex] = {
+            ...updatedMessages[existingIndex],
+            ...decryptedMessage,
 
+            // Preserve attachment data.
+            fileUrl:
+                decryptedMessage.fileUrl ||
+                updatedMessages[existingIndex].fileUrl ||
+                "",
 
-                        return [
-                            ...previousMessages,
-                            decryptedMessage
-                        ];
+            fileName:
+                decryptedMessage.fileName ||
+                updatedMessages[existingIndex].fileName ||
+                "",
 
-                    }
-                );
+            messageType:
+                decryptedMessage.messageType ||
+                updatedMessages[existingIndex].messageType
+        };
+
+        return updatedMessages;
+    }
+);
 
             };
 
