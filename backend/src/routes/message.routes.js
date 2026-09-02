@@ -9,11 +9,8 @@ import {
     editMessageController,
 
 } from "../controllers/message/message.controller.js";
-import {
-    uploadChatFileController
-} from "../controllers/message/messageUpload.controller.js";
+
 import authMiddleware from "../middleware/auth.middleware.js";
-import chatUpload from "../middleware/chatUpload.middleware.js";
 const router = express.Router();
 
 
@@ -29,12 +26,7 @@ router.get(
     authMiddleware,
     getUnreadCountController
 );
-router.post(
-    "/projects/:projectId/messages/upload",
-    authMiddleware,
-    chatUpload.single("file"),
-    uploadChatFileController
-);
+
 
 // Delete message only for current user
 
