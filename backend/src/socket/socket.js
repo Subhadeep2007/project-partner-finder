@@ -1327,69 +1327,42 @@ const initializeSocket =
 
                 socket.on(
                     "delete_message_for_everyone",
-                    async({
-                            messageId
-                        },
-                        callback
-                    ) => {
-
+                    async({ messageId }, callback) => {
                         try {
 
-                            const message =
+                            const deletedMessage =
                                 await deleteMessageForEveryone({
-
                                     messageId,
-
                                     userId
-
                                 });
 
-
                             io.to(
-                                `project:${message.project.toString()}`
+                                `project:${deletedMessage.projectId.toString()}`
                             ).emit(
                                 "message_deleted_for_everyone", {
-                                    messageId: message._id,
-
-                                    deletedAt: message.deletedAt
+                                    messageId: deletedMessage.messageId.toString(),
+                                    deletedAt: new Date()
                                 }
                             );
 
-
-                            if (
-                                typeof callback ===
-                                "function"
-                            ) {
-
+                            if (typeof callback === "function") {
                                 return callback({
-
                                     success: true,
-
-                                    message: "Message deleted for everyone"
-
+                                    message: "Message deleted for everyone",
+                                    data: deletedMessage
                                 });
-
                             }
 
                         } catch (error) {
 
-                            if (
-                                typeof callback ===
-                                "function"
-                            ) {
-
+                            if (typeof callback === "function") {
                                 return callback({
-
                                     success: false,
-
                                     message: error.message
-
                                 });
-
                             }
 
                         }
-
                     }
                 );
 

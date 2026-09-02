@@ -416,22 +416,22 @@ useEffect(() => {
     // ==========================================
 
     const getReplyPreviewText = (message) => {
+    if (!message) return "";
 
-        if (!message) {
-            return "";
-        }
+    if (message.isDeletedForEveryone) {
+        return "This message was deleted";
+    }
 
-        if (message.isDeletedForEveryone) {
-            return "This message was deleted";
-        }
+    if (message.messageType === "image") {
+        return `📷 ${message.fileName || "Photo"}`;
+    }
 
-        return (
-            message.decryptedContent ||
-            message.content ||
-            "Encrypted message"
-        );
+    if (message.messageType === "file") {
+        return `📎 ${message.fileName || "File"}`;
+    }
 
-    };
+    return message.decryptedContent || message.content || "Encrypted message";
+};
 
 
     const resolveReplyMessage = (message, sourceMessages = []) => {
@@ -1814,8 +1814,7 @@ const handleMessageRekeyRequest =
                             (message) => {
 
                                 if (
-                                    message._id ===
-                                    messageId
+                                    String(message._id) === String(messageId)
                                 ) {
 
                                     return {
@@ -2522,66 +2521,74 @@ const handleCancelReply = () => {
     // ==========================================
 
     const handleFileUpload =
-        async(
-            event
-        ) => {
+    async(
+        event
+    ) => {
 
-            const file =
-                event.target.files &&
-                event.target.files[0];
+        const file =
+            event.target.files &&
+            event.target.files[0];
 
+        if (!file) {
+            return;
+        }
 
-            if (!file) {
+        try {
 
-                return;
+            setUploading(true);
+            setError("");
 
-            }
-
-
-            try {
-
-                setUploading(true);
-                setError("");
-
-
+            const response =
                 await uploadChatFile(
                     projectId,
                     file
                 );
 
+            const uploadedMessage =
+                response?.data;
 
-                event.target.value =
-                    "";
+            if (uploadedMessage) {
 
-            } catch (error) {
+                setMessages(
+                    (previousMessages) => {
 
-                let errorMessage =
-                    "Failed to upload file";
+                        const alreadyExists =
+                            previousMessages.some(
+                                (message) =>
+                                    String(message._id) ===
+                                    String(uploadedMessage._id)
+                            );
 
+                        if (alreadyExists) {
+                            return previousMessages;
+                        }
 
-                if (
-                    error.response &&
-                    error.response.data &&
-                    error.response.data.message
-                ) {
-
-                    errorMessage =
-                        error.response.data.message;
-
-                }
-
-
-                setError(
-                    errorMessage
+                        return [
+                            ...previousMessages,
+                            uploadedMessage
+                        ];
+                    }
                 );
-
-            } finally {
-
-                setUploading(false);
 
             }
 
-        };
+            event.target.value = "";
+
+        } catch (error) {
+
+            setError(
+                error?.response?.data?.message ||
+                error?.message ||
+                "Failed to upload file"
+            );
+
+        } finally {
+
+            setUploading(false);
+
+        }
+
+    };
 
 const updateEditedMessage = async(
     messageId,
