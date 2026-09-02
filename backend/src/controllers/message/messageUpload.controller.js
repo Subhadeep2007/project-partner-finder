@@ -329,15 +329,31 @@ const uploadChatFileController = async(
             )
         ];
 
-
         uniqueParticipantIds.forEach(
             (participantId) => {
 
+                const personalRoom =
+                    `user:${participantId}`;
+
+                const personalSockets =
+                    io.sockets.adapter.rooms.get(
+                        personalRoom
+                    );
+
+                console.log(
+                    "FILE PERSONAL ROOM CHECK:",
+                    personalRoom,
+                    "SOCKET COUNT:",
+                    personalSockets ?
+                    personalSockets.size :
+                    0
+                );
+
                 io.to(
-                    `user:${participantId}`
+                    personalRoom
                 ).emit(
                     "receive_message",
-                    message
+                    messageData
                 );
 
             }
