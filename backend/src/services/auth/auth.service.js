@@ -167,12 +167,7 @@ const loginUser = async({ email, password }) => {
         throw new Error("Your account is inactive");
     }
 
-    // 3. Check email verification
-    if (!user.isEmailVerified) {
-        throw new Error("Please verify your email first");
-    }
-
-    // 4. Compare password
+    // 3. Check password BEFORE email verification
     const isPasswordCorrect = await bcrypt.compare(
         password,
         user.password
@@ -182,10 +177,54 @@ const loginUser = async({ email, password }) => {
         throw new Error("Invalid email or password");
     }
 
-    // 5. Generate tokens
-    const accessToken = generateAccessToken(user._id.toString());
+    // 4. Check email verification
+    if (!user.isEmailVerified) {
+        const otp = generateOTP();
 
-    const refreshToken = generateRefreshToken(user._id.toString());
+        const otpExpire = new Date(
+            Date.now() + 10 * 60 * 1000
+        );
+
+        user.emailVerificationOTP = otp;
+        user.emailVerificationOTPExpire = otpExpire;
+
+        await user.save();
+
+        await sendEmail({
+            to: user.email,
+            subject: "Verify your Project Partner Finder account",
+            html: `
+                <h2>Project Partner Finder</h2>
+
+                <p>Hello ${user.name},</p>
+
+                <p>Your email verification OTP is:</p>
+
+                <h1>${otp}</h1>
+
+                <p>This OTP will expire in 10 minutes.</p>
+
+                <p>
+                    Please enter this OTP on the email verification page
+                    to activate your account.
+                </p>
+            `
+        });
+
+        return {
+            requiresEmailVerification: true,
+            email: user.email
+        };
+    }
+
+    // 5. Generate tokens
+    const accessToken = generateAccessToken(
+        user._id.toString()
+    );
+
+    const refreshToken = generateRefreshToken(
+        user._id.toString()
+    );
 
     // 6. Save refresh token
     user.refreshToken = refreshToken;
@@ -194,6 +233,7 @@ const loginUser = async({ email, password }) => {
 
     // 7. Return safe user data + tokens
     return {
+        requiresEmailVerification: false,
         user: {
             id: user._id,
             name: user.name,

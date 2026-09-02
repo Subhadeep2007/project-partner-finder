@@ -172,7 +172,22 @@ const LoginPage = () => {
                             formData.password
 
                     });
+// ==========================================
+// EMAIL VERIFICATION REQUIRED
+// ==========================================
 
+if (
+    result.data &&
+    result.data.requiresEmailVerification
+) {
+    navigate(
+        `/verify-email?email=${encodeURIComponent(
+            result.data.email || formData.email.trim()
+        )}`
+    );
+
+    return;
+}
 
                 const accessToken =
                     result.data &&
