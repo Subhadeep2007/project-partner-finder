@@ -18,7 +18,7 @@ import {
     editMessage
 } from "../services/message/message.service.js";
 
-
+import Message from "../models/message.js";
 let io;
 
 
