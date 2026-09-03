@@ -159,7 +159,12 @@ const initializeSocket =
                 const userId =
                     socket.user.userId;
 
-
+                console.log(
+                    "SOCKET INSTANCE:",
+                    process.pid,
+                    "USER:",
+                    userId
+                );
                 // ==========================================
                 // USER PERSONAL ROOM
                 // ==========================================
