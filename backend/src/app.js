@@ -32,7 +32,22 @@ app.use(express.urlencoded({ extended: true }));
 
 // Read cookies
 app.use(cookieParser());
+app.use((req, res, next) => {
+    if (
+        req.method === "POST" &&
+        req.originalUrl.includes("/messages/upload")
+    ) {
+        console.log(
+            "🔥 UPLOAD REQUEST RECEIVED:",
+            req.method,
+            req.originalUrl,
+            "PID:",
+            process.pid
+        );
+    }
 
+    next();
+});
 // Health check
 app.get("/api/v1/health", (req, res) => {
     return res.status(200).json({
