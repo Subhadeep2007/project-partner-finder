@@ -1520,6 +1520,7 @@ const orderedMessages =
             async(
                 message
             ) => {
+console.log("🔥 RECEIVER GOT:", message);
 
                 if (!message) {
 
