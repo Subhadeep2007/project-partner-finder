@@ -32,6 +32,13 @@ const AppLayout = () => {
     const [projectsLoading, setProjectsLoading] =
         useState(true);
 
+    // ==========================================
+    // MOBILE SIDEBAR
+    // ==========================================
+
+    const [mobileMenuOpen, setMobileMenuOpen] =
+        useState(false);
+
 
     // ==========================================
     // LOGOUT
@@ -130,6 +137,26 @@ const AppLayout = () => {
 
 
     // ==========================================
+    // MOBILE NAVIGATION HELPERS
+    // ==========================================
+
+    const closeMobileMenu = () => {
+        setMobileMenuOpen(false);
+    };
+
+    useEffect(() => {
+        document.body.style.overflow =
+            mobileMenuOpen
+                ? "hidden"
+                : "";
+
+        return () => {
+            document.body.style.overflow = "";
+        };
+    }, [mobileMenuOpen]);
+
+
+    // ==========================================
     // MAIN NAV LINK CLASS
     // ==========================================
 
@@ -140,9 +167,10 @@ const AppLayout = () => {
         return `
             !block
             !rounded-xl
-            !px-4
+            !px-3
             !py-3
             !text-sm
+            sm:!px-4
             !font-semibold
             !transition
             ${
@@ -169,9 +197,11 @@ const AppLayout = () => {
             !gap-3
             !rounded-xl
             !border
-            !px-4
-            !py-3
+            !px-3
+            !py-2.5
             !transition
+            sm:!px-4
+            sm:!py-3
             ${
                 isActive
                     ? "!border-white/10 !bg-white/[0.04] !text-white"
@@ -187,6 +217,8 @@ const AppLayout = () => {
         <div
             className="
                 !min-h-screen
+                !w-full
+                !overflow-x-hidden
                 !bg-[#070b0f]
                 !text-white
                 lg:!flex
@@ -194,26 +226,172 @@ const AppLayout = () => {
         >
 
             {/* ==========================================
+                MOBILE TOP BAR
+            ========================================== */}
+
+            <div
+                className="
+                    !sticky
+                    !top-0
+                    !z-40
+                    !flex
+                    !h-16
+                    !w-full
+                    !items-center
+                    !justify-between
+                    !border-b
+                    !border-white/10
+                    !bg-[#0b1117]/95
+                    !px-4
+                    !backdrop-blur-xl
+                    lg:!hidden
+                "
+            >
+
+                <NavLink
+                    to="/dashboard"
+                    onClick={
+                        closeMobileMenu
+                    }
+                    className="
+                        !no-underline
+                    "
+                >
+
+                    <div
+                        className="
+                            !font-mono
+                            !text-[9px]
+                            !font-bold
+                            !uppercase
+                            !tracking-[0.25em]
+                            !text-slate-500
+                        "
+                    >
+                        PROJECT_PARTNER
+                    </div>
+
+                    <div
+                        className="
+                            !text-lg
+                            !font-black
+                            !tracking-wide
+                            !text-emerald-400
+                        "
+                    >
+                        FINDER
+                    </div>
+
+                </NavLink>
+
+
+                <button
+                    type="button"
+                    aria-label={
+                        mobileMenuOpen
+                            ? "Close navigation menu"
+                            : "Open navigation menu"
+                    }
+                    aria-expanded={
+                        mobileMenuOpen
+                    }
+                    onClick={() =>
+                        setMobileMenuOpen(
+                            (previous) =>
+                                !previous
+                        )
+                    }
+                    className="
+                        !flex
+                        !h-10
+                        !w-10
+                        !items-center
+                        !justify-center
+                        !rounded-xl
+                        !border
+                        !border-white/10
+                        !bg-white/[0.04]
+                        !text-slate-200
+                        !transition
+                        hover:!bg-white/[0.08]
+                        active:!scale-95
+                    "
+                >
+
+                    <span
+                        className="
+                            !text-xl
+                            !leading-none
+                        "
+                    >
+                        {mobileMenuOpen ? "×" : "☰"}
+                    </span>
+
+                </button>
+
+            </div>
+
+
+            {/* ==========================================
+                MOBILE SIDEBAR OVERLAY
+            ========================================== */}
+
+            {mobileMenuOpen && (
+
+                <button
+                    type="button"
+                    aria-label="Close navigation menu"
+                    onClick={
+                        closeMobileMenu
+                    }
+                    className="
+                        !fixed
+                        !inset-0
+                        !z-40
+                        !bg-black/60
+                        !backdrop-blur-[2px]
+                        lg:!hidden
+                    "
+                />
+
+            )}
+
+
+            {/* ==========================================
                 SIDEBAR
             ========================================== */}
 
             <aside
-                className="
-                    !w-full
-                    !border-b
+                className={`
+                    !fixed
+                    !inset-y-0
+                    !left-0
+                    !z-50
+                    !flex
+                    !h-screen
+                    !w-[min(84vw,18rem)]
+                    !shrink-0
+                    !flex-col
+                    !overflow-y-auto
+                    !border-r
                     !border-white/10
                     !bg-[#0b1117]
+                    !shadow-2xl
+                    !transition-transform
+                    !duration-300
+                    !ease-out
+                    ${
+                        mobileMenuOpen
+                            ? "!translate-x-0"
+                            : "!-translate-x-full"
+                    }
                     lg:!sticky
                     lg:!top-0
-                    lg:!flex
+                    lg:!translate-x-0
                     lg:!h-screen
                     lg:!w-72
-                    lg:!shrink-0
-                    lg:!flex-col
-                    lg:!overflow-y-auto
-                    lg:!border-b-0
-                    lg:!border-r
-                "
+                    lg:!shadow-none
+                `}
             >
 
                 {/* ======================================
@@ -225,13 +403,17 @@ const AppLayout = () => {
                         !border-b
                         !border-white/10
                         !px-5
-                        !py-5
+                        !py-4
                         sm:!px-6
+                        sm:!py-5
                     "
                 >
 
                     <NavLink
                         to="/dashboard"
+                        onClick={
+                            closeMobileMenu
+                        }
                         className="
                             !no-underline
                         "
@@ -274,10 +456,13 @@ const AppLayout = () => {
                 ====================================== */}
 
                 <nav
+                    onClick={closeMobileMenu}
                     className="
+                        !min-h-0
                         !flex-1
                         !overflow-y-auto
-                        !p-4
+                        !p-3
+                        sm:!p-4
                     "
                 >
 
@@ -810,17 +995,20 @@ const AppLayout = () => {
 
                 <div
                     className="
+                        !shrink-0
                         !border-t
                         !border-white/10
-                        !p-4
+                        !p-3
+                        sm:!p-4
                     "
                 >
 
                     <button
                         type="button"
-                        onClick={
-                            handleLogout
-                        }
+                        onClick={() => {
+                            closeMobileMenu();
+                            handleLogout();
+                        }}
                         className="
                             !flex
                             !min-h-11
@@ -831,9 +1019,11 @@ const AppLayout = () => {
                             !border
                             !border-red-400/20
                             !bg-red-400/5
-                            !px-4
-                            !py-3
+                            !px-3
+                            !py-2.5
                             !text-sm
+                            sm:!px-4
+                            sm:!py-3
                             !font-semibold
                             !text-red-300
                             !transition
@@ -870,7 +1060,9 @@ const AppLayout = () => {
             <div
                 className="
                     !min-w-0
+                    !w-full
                     !flex-1
+                    lg:!w-auto
                 "
             >
 
@@ -880,7 +1072,9 @@ const AppLayout = () => {
                 <main
                     className="
                         !min-w-0
+                        !w-full
                         !flex-1
+                        !overflow-x-hidden
                     "
                 >
 
