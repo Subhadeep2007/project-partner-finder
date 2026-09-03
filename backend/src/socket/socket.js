@@ -1032,7 +1032,102 @@ const initializeSocket =
                     }
                 );
 
+                socket.on(
+                    "file_message_created",
+                    async({
+                            projectId,
+                            messageId
+                        },
+                        callback
+                    ) => {
+                        try {
 
+                            const project =
+                                await Project.findById(
+                                    projectId
+                                );
+
+                            if (!project) {
+                                throw new Error(
+                                    "Project not found"
+                                );
+                            }
+
+                            const isOwner =
+                                project.owner.toString() ===
+                                userId;
+
+                            const isMember =
+                                project.members.some(
+                                    (memberId) =>
+                                    memberId.toString() ===
+                                    userId
+                                );
+
+                            if (!isOwner &&
+                                !isMember
+                            ) {
+                                throw new Error(
+                                    "You are not authorized for this project"
+                                );
+                            }
+
+                            const message =
+                                await Message.findOne({
+                                    _id: messageId,
+                                    project: projectId
+                                }).populate(
+                                    "sender",
+                                    "name profileImage"
+                                );
+
+                            if (!message) {
+                                throw new Error(
+                                    "Message not found"
+                                );
+                            }
+
+                            const messageData = {
+                                ...message.toObject(),
+                                _id: message._id.toString(),
+                                project: project._id.toString()
+                            };
+
+                            io.to(
+                                `project:${projectId}`
+                            ).emit(
+                                "receive_message",
+                                messageData
+                            );
+
+                            if (
+                                typeof callback ===
+                                "function"
+                            ) {
+                                callback({
+                                    success: true
+                                });
+                            }
+
+                        } catch (error) {
+
+                            console.error(
+                                "FILE MESSAGE SOCKET ERROR:",
+                                error
+                            );
+
+                            if (
+                                typeof callback ===
+                                "function"
+                            ) {
+                                callback({
+                                    success: false,
+                                    message: error.message
+                                });
+                            }
+                        }
+                    }
+                );
                 // ==========================================
                 // MESSAGE DELIVERED
                 // ==========================================

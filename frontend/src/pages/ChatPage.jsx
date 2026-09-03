@@ -2582,8 +2582,78 @@ const handleCancelReply = () => {
     // FILE UPLOAD
     // ==========================================
 
+    // const handleFileUpload =
+    // async(
+    //     event
+    // ) => {
+
+    //     const file =
+    //         event.target.files &&
+    //         event.target.files[0];
+
+    //     if (!file) {
+    //         return;
+    //     }
+
+    //     try {
+
+    //         setUploading(true);
+    //         setError("");
+
+    //         const response =
+    //             await uploadChatFile(
+    //                 projectId,
+    //                 file
+    //             );
+
+    //         const uploadedMessage =
+    //             response?.data;
+
+    //         if (uploadedMessage) {
+
+    //             setMessages(
+    //                 (previousMessages) => {
+
+    //                     const alreadyExists =
+    //                         previousMessages.some(
+    //                             (message) =>
+    //                                 String(message._id) ===
+    //                                 String(uploadedMessage._id)
+    //                         );
+
+    //                     if (alreadyExists) {
+    //                         return previousMessages;
+    //                     }
+
+    //                     return [
+    //                         ...previousMessages,
+    //                         uploadedMessage
+    //                     ];
+    //                 }
+    //             );
+
+    //         }
+
+    //         event.target.value = "";
+
+    //     } catch (error) {
+
+    //         setError(
+    //             error?.response?.data?.message ||
+    //             error?.message ||
+    //             "Failed to upload file"
+    //         );
+
+    //     } finally {
+
+    //         setUploading(false);
+
+    //     }
+
+    // };
+
     const handleFileUpload =
-    async(
+    async (
         event
     ) => {
 
@@ -2609,30 +2679,30 @@ const handleCancelReply = () => {
             const uploadedMessage =
                 response?.data;
 
-            if (uploadedMessage) {
-
-                setMessages(
-                    (previousMessages) => {
-
-                        const alreadyExists =
-                            previousMessages.some(
-                                (message) =>
-                                    String(message._id) ===
-                                    String(uploadedMessage._id)
-                            );
-
-                        if (alreadyExists) {
-                            return previousMessages;
-                        }
-
-                        return [
-                            ...previousMessages,
-                            uploadedMessage
-                        ];
-                    }
+            if (!uploadedMessage?._id) {
+                throw new Error(
+                    "Uploaded message ID not received"
                 );
-
             }
+
+            socket.emit(
+                "file_message_created",
+                {
+                    projectId,
+                    messageId:
+                        uploadedMessage._id
+                },
+                (socketResponse) => {
+
+                    if (!socketResponse?.success) {
+                        console.error(
+                            "File socket broadcast failed:",
+                            socketResponse?.message
+                        );
+                    }
+
+                }
+            );
 
             event.target.value = "";
 
