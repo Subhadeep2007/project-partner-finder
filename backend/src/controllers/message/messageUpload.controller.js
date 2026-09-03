@@ -182,7 +182,9 @@ const uploadChatFileController = async(
     res,
     next
 ) => {
-
+    console.log(
+        "🔥🔥 FILE UPLOAD CONTROLLER HIT 🔥🔥"
+    );
     try {
 
         const {
