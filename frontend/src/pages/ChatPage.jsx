@@ -2606,33 +2606,33 @@ const handleCancelReply = () => {
                     file
                 );
 
-            const uploadedMessage =
-                response?.data;
+            // const uploadedMessage =
+            //     response?.data;
 
-            if (uploadedMessage) {
+            // if (uploadedMessage) {
 
-                setMessages(
-                    (previousMessages) => {
+            //     setMessages(
+            //         (previousMessages) => {
 
-                        const alreadyExists =
-                            previousMessages.some(
-                                (message) =>
-                                    String(message._id) ===
-                                    String(uploadedMessage._id)
-                            );
+            //             const alreadyExists =
+            //                 previousMessages.some(
+            //                     (message) =>
+            //                         String(message._id) ===
+            //                         String(uploadedMessage._id)
+            //                 );
 
-                        if (alreadyExists) {
-                            return previousMessages;
-                        }
+            //             if (alreadyExists) {
+            //                 return previousMessages;
+            //             }
 
-                        return [
-                            ...previousMessages,
-                            uploadedMessage
-                        ];
-                    }
-                );
+            //             return [
+            //                 ...previousMessages,
+            //                 uploadedMessage
+            //             ];
+            //         }
+            //     );
 
-            }
+            // }
 
             event.target.value = "";
 
