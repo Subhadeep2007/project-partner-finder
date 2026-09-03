@@ -285,8 +285,11 @@ const uploadChatFileController = async(
             "sender",
             "name profileImage"
         );
-        const messageData = message.toObject();
-
+        const messageData = {
+            ...message.toObject(),
+            _id: message._id.toString(),
+            project: projectId.toString()
+        };
 
         const io = getIO();
 
